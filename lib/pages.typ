@@ -42,8 +42,7 @@
 #let degree-type-checkbox(degree-type) = {
   assert(
     degree-type == "academic" or degree-type == "professional",
-    message: "degree-type 必须是 \"academic\" 或 \"professional\"，当前值: "
-      + repr(degree-type),
+    message: "degree-type 必须是 \"academic\" 或 \"professional\"，当前值: " + repr(degree-type),
   )
   let academic-box = if degree-type == "academic" {
     sym-box-checked(12pt)
@@ -119,8 +118,7 @@
     grid(
       columns: (auto, auto),
       gutter: 0.4em,
-      image("../pkulogo.svg", height: 2.4em, fit: "contain"),
-      image("../pkuword.svg", height: 1.6em, fit: "contain"),
+      image("../shzu_logo_2019.jpg", height: 5em, fit: "contain"),
     ),
   )
   linebreak()
