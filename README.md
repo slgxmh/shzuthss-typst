@@ -1,6 +1,8 @@
-# modern-pku-thesis
+# modern-shzu-thesis
 
-北京大学学位论文 Typst 模板 / Typst template for dissertations in Peking University (PKU).
+石河子大学位论文 Typst 模板 
+
+感谢 https://github.com/slgxmh/shzuthss-typst 的贡献，本项目基于此开发！
 
 ![cover](./images/cover.png)
 
