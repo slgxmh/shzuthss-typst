@@ -1,4 +1,4 @@
-// 北京大学学位论文模板
+// 石河子大学学位论文模板
 // 使用方法：typst compile main.typ --font-path fonts
 //
 // 命令行参数：
@@ -15,7 +15,7 @@
   studentid: "23000xxxxx",
   blindid: "L2023XXXXX",
   cthesisname: "博士研究生学位论文",
-  cheader: "北京大学博士学位论文",
+  cheader: "石河子大学博士学位论文",
   ctitle: "论文中文标题",
   etitle: "English Title of Your Dissertation",
   school: "某个学院",

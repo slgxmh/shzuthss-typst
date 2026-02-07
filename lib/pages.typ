@@ -292,7 +292,7 @@
   // Word 模板中首行缩进固定为 2em
   set par(first-line-indent: 2em)
   back-heading(
-    "北京大学学位论文原创性声明和使用授权说明",
+    "石河子大学学位论文原创性声明和使用授权说明",
     pagebreak: true,
     // Word 模板中原创性声明页有页眉，如果不想要，可以在这里手动关闭
     show-header: not cleandeclaration,
@@ -337,7 +337,7 @@
     #v(1fr)
 
     #set par(leading: 0.95em, spacing: 0.95em)
-    本人完全了解北京大学关于收集、保存、使用学位论文的规定，即：
+    本人完全了解石河子大学关于收集、保存、使用学位论文的规定，即：
     #[
       #set list(
         marker: [#grid(

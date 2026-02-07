@@ -36,15 +36,11 @@
 #import "lib/config.typ": appendix, 字体, 字号, 引用记号
 #import "lib/utils.typ": chinesenumbering
 #import "lib/components.typ": booktab, chineseoutline, codeblock, listoffigures
-#import "lib/styles.typ": (
-  sym-bullet, sym-square-filled, sym-square-filled-rotated,
-)
+#import "lib/styles.typ": sym-bullet, sym-square-filled, sym-square-filled-rotated
 
 // 高级用户 API：导出内部计数器和状态，用于自定义章节编号等场景
 // 注意：这些是内部实现细节，未来版本可能会有变化
-#import "lib/config.typ": (
-  appendixcounter, chaptercounter, partcounter, skippedstate,
-)
+#import "lib/config.typ": appendixcounter, chaptercounter, partcounter, skippedstate
 
 // 内部使用的模块
 #import "lib/pages.typ"
@@ -57,8 +53,8 @@
   studentid: "23000xxxxx",
   blindid: "L2023XXXXX",
   cthesisname: "博士研究生学位论文",
-  cheader: "北京大学博士学位论文",
-  ctitle: "北京大学学位论文 Typst 模板",
+  cheader: "石河子大学博士学位论文",
+  ctitle: "石河子大学学位论文 Typst 模板",
   etitle: "Typst Template for Peking University Dissertations",
   school: "某个学院",
   cfirstmajor: "某个一级学科",
