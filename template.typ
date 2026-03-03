@@ -35,7 +35,7 @@
 // 导入并重导出所有公共符号
 #import "lib/config.typ": appendix, 字体, 字号, 引用记号
 #import "lib/utils.typ": chinesenumbering
-#import "lib/components.typ": booktab, chineseoutline, codeblock, listoffigures
+#import "lib/components.typ": booktab, chineseoutline, codeblock, listoffigures, three-line-table
 #import "lib/styles.typ": sym-bullet, sym-square-filled, sym-square-filled-rotated
 
 // 高级用户 API：导出内部计数器和状态，用于自定义章节编号等场景

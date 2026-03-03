@@ -1,9 +1,7 @@
 // lib/components.typ - UI 组件
 // 目录、图表列表、代码块、三线表等可复用组件
 
-#import "config.typ": (
-  appendixcounter, chaptercounter, front-heading, partcounter, 字号, 引用记号,
-)
+#import "config.typ": appendixcounter, chaptercounter, front-heading, partcounter, 字号, 引用记号
 #import "utils.typ": bodytotextwithtrim, chinesenumbering
 
 // 中文目录
@@ -73,10 +71,7 @@
     let heading_counter = counter(heading).at(el_loc)
     let is-appendix = appendixcounter.at(el_loc).first() >= 10
     let is-first-body-chapter = (
-      el.level == 1
-        and el.numbering != none
-        and heading_counter == (1,)
-        and not is-appendix
+      el.level == 1 and el.numbering != none and heading_counter == (1,) and not is-appendix
     )
 
     // 页码可点击跳转
@@ -226,4 +221,33 @@
   } else {
     the-table
   }
+}
+
+// 三线表格快速包装
+#let three-line-table(it) = {
+  if it.children.any(c => c.func() == table.hline) {
+    return it
+  }
+
+  let meta = it.fields()
+  meta.stroke = none
+  meta.remove("children")
+
+  let header = it.children.find(c => c.func() == table.header)
+  let cells = it.children.filter(c => c.func() == table.cell)
+
+  if header == none {
+    let columns = meta.columns.len()
+    header = table.header(..cells.slice(0, columns))
+    cells = cells.slice(columns)
+  }
+
+  return table(
+    ..meta,
+    table.hline(stroke: 0.08em),
+    header,
+    table.hline(stroke: 0.05em),
+    ..cells,
+    table.hline(stroke: 0.08em),
+  )
 }

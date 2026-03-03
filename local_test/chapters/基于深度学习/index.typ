@@ -1,4 +1,5 @@
 #import "tables.typ": *
+#import "../../../template.typ": *
 
 == 引言
 
@@ -146,7 +147,7 @@ $ Y == W_o [ A t t e n t i o n (X) ] + W_r(X) $ <eqtmsca>
 ) <data_area>
 
 #figure(
-  (
+  three-line-table(
     table(
       columns: 3,
       [参数名称], [参数值], [参数说明],
@@ -155,7 +156,7 @@ $ Y == W_o [ A t t e n t i o n (X) ] + W_r(X) $ <eqtmsca>
       [航向重叠率], [60%], [平坦地面的验设置],
       [旁向重叠率], [70%], [平坦地面的经验设置],
       [飞行速度], [2.7m/s], [为了更好获得清晰的图像],
-    )
+    ),
   ),
   caption: "任务航线参数表",
 ) <fly_param>
@@ -230,7 +231,7 @@ $ text("GMACs") == frac(text("MACs")_text("total"), 10^9) $
 本研究从多个维度评估了不同模型的综合性能，包括分类准确率、参数数量、计算复杂度（以GMACs作为指标）以及在大疆遥控器上的移动推理性能，用以全面衡量模型在资源受限设备上的部署潜力。
 
 #figure(
-  all_metrics,
+  three-line-table(all_metrics),
   caption: "综合性能表",
 )<allmetric>
 
@@ -289,7 +290,7 @@ EfficientNet和SqueezeNet的表现略低于ShuffleNetV2，但仍在一定程度�
 === 消融实验
 
 #figure(
-  (ablation_study),
+  three-line-table(ablation_study),
   caption: "消融实验。列出了五种不同的网络配置及其对应的性能指标。每种配置由layer_nums、Attn类型和head_num三个参数决定。其中，layer_nums表示网络层数与模块数量的配置，Attn表示注意力机制的类型（CF或MSCA），head_num表示多头注意力机制的头数。",
 )<ablation_study>
 
