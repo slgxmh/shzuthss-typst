@@ -106,7 +106,7 @@ $ "NGRDI" = (G - R) / (G + R + epsilon) $
 
 本章结果表明：基于光谱/颜色/纹理的传统回归方案可为成熟状态估算提供可靠先验，也为后续深度学习模型设计提供特征启发。
 
-#include "chapters/基于深度学习/main.typ"
+#include "chapters/基于深度学习/index.typ"
 
 == 本章小结
 
