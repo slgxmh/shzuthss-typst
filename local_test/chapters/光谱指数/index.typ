@@ -49,13 +49,13 @@ $ D e f o l i a t i o n space R a t e (%) == (1 - N_(g l)/N_(o l)) times 100 % $
 数据文件包含三个核心数据集，如表所示。
 
 #figure(
-  table(
+  three-line-table(table(
     columns: 4,
     [字段名], [含义], [维度], [类型],
     [`images`], [变换增强后的图像数据], [`(N, 3, 224, 224)`], [`float32`],
     [`de_labels`], [脱叶率标签], [`(N,)`], [`int8`],
     [`ba_labels`], [吐絮率标签], [`(N,)`], [`int8`],
-  ),
+  )),
   caption: "HDF5 数据文件核心字段说明",
 ) <tab:hdf5-core>
 
@@ -185,26 +185,26 @@ $ "NGRDI" = frac(G - R, G + R + epsilon) $
 （1）脱叶率任务（`de`）结果如下。
 
 #figure(
-  table(
+  three-line-table(table(
     columns: 5,
     [模型], [Val Acc], [Val Macro-F1], [Test Acc], [Test Macro-F1],
     [PCA+LogisticRegression], [0.3864], [*0.1976*], [*0.4091*], [*0.3049*],
     [RandomForest], [0.3409], [0.0658], [0.3258], [0.1469],
     [RandomForestBalanced], [0.3636], [0.1897], [0.3106], [0.1305],
-  ),
+  )),
   caption: "脱叶率（de）实验结果",
 ) <tab:de-res>
 
 （2）吐絮率任务（`ba`）结果如下。
 
 #figure(
-  table(
+  three-line-table(table(
     columns: 5,
     [模型], [Val Acc], [Val Macro-F1], [Test Acc], [Test Macro-F1],
     [PCA+LogisticRegression], [0.4091], [*0.3312*], [*0.5000*], [*0.3989*],
     [RandomForest], [*0.4773*], [0.1077], [0.4242], [0.1105],
     [RandomForestBalanced], [*0.4773*], [0.1077], [0.4167], [0.0980],
-  ),
+  )),
   caption: "吐絮率（ba）实验结果",
 ) <tab:ba-res>
 
