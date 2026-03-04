@@ -43,7 +43,7 @@
   doc,
 )
 
-#include "chapters/intro.typ"
+#include "chapters/绪论/index.typ"
 
 #include "chapters/数据集/index.typ"
 
