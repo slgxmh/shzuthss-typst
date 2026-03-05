@@ -12,9 +12,9 @@
 
 == 引言
 
-无人机平台能够在大尺度农田上快速获取高分辨率可见光影像，为作物长势评估、病虫害巡查与表型分析提供高时空分辨率数据@guebsi2024drones @aierken2024review。然而在夜间或弱光条件下，UAV 影像常出现整体曝光不足、噪声显著、对比度下降与颜色偏移等问题@widartono2025aerial @fu2022highlightnet，直接影响后续检测、分割与计数等视觉任务的稳定性与可用性@silwal2021robust。
+无人机平台能够在大尺度农田上快速获取高分辨率可见光影像，为作物长势评估、病虫害巡查与表型分析提供高时空分辨率数据@tian2020uav_crop_monitor @aierken2024review。然而在夜间或弱光条件下，UAV 影像常出现整体曝光不足、噪声显著、对比度下降与颜色偏移等问题@widartono2025aerial @fu2022highlightnet，直接影响后续检测、分割与计数等视觉任务的稳定性与可用性@silwal2021robust。
 
-在农业生产中，夜间影像获取并非边缘需求。受白天温度、风速、人员与机械调度影响，夜间与清晨时段反而更利于持续开展航测与巡检@flynn2026assessing。以棉花等大田作物为例，生长中后期群体结构变化快、田块跨度大，影像质量一旦不稳，易造成下游任务在田块间和批次间表现波动@bendig2015combining @yang2017unmanned @kamilaris2018deep @xu2019multispectral。
+在农业生产中，夜间影像获取并非边缘需求。受白天温度、风速、人员与机械调度影响，夜间与清晨时段反而更利于持续开展航测与巡检@flynn2026assessing。以棉花等大田作物为例，生长中后期群体结构变化快、田块跨度大，影像质量一旦不稳，易造成下游任务在田块间和批次间表现波动@bendig2015combining @tian2020uav_crop_monitor @kamilaris2018deep @xu2019multispectral。
 
 从成像链路看，夜间 UAV 退化通常是多因素叠加：低照度引起曝光与增益变化，使噪声显著增强@kurimo2009effect；机体振动与飞行速度放大运动模糊风险@tsekhmystro2025uav；ISP 在弱光下更易产生纹理涂抹与伪影@li2021low；复杂反射光又进一步扰动白平衡与色彩一致性@lu2025unsupervised。上述因素共同导致夜间图像在亮度、纹理和颜色三个层面同步退化。
 
