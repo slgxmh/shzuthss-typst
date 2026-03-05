@@ -1,3 +1,5 @@
+#import "../../../template.typ": three-line-table
+
 = 全天候实时脱叶率吐絮率识别方法
 
 == 引言
@@ -80,14 +82,14 @@ $ L_("color") = frac(1, B) sum_(i=1)^B ‖ r(y_i) - r(t_i) ‖_1 $
 === 综合性能分析
 
 #figure(
-  table(
+  three-line-table(table(
     columns: 7,
     table.header([骨干], [参数量(k)], [FLOPs(G)], [PSNR(dB)↑], [SSIM(%)↑], [MAE(%)↓], [LPIPS(%)↓]),
     [Zero-DCE++], [11.6], [1.01], [11.41], [47.36], [22.89], [41.46],
     [RFDN], [371], [35.23], [23.45], [84.16], [5.32], [15.75],
     [IMDN], [689], [68.67], [24.88], [85.05], [4.53], [11.04],
     [$L^3$-AgriUAVNet], [138], [11.94], [24.71], [84.62], [4.58], [9.80],
-  ),
+  )),
   caption: [
     不同低光图像增强方法在夜间 UAV 场景下的定量性能对比。表中比较了各方法的模型参数量、计算复杂度（FLOPs）以及客观图像质量指标，包括 PSNR、SSIM、MAE 和 LPIPS。其中，PSNR 和 SSIM 越大越好，MAE 和 LPIPS 越小越好。
   ],
@@ -112,14 +114,14 @@ $ L_("color") = frac(1, B) sum_(i=1)^B ‖ r(y_i) - r(t_i) ‖_1 $
 === 消融实验
 
 #figure(
-  table(
+  three-line-table(table(
     columns: 10,
     table.header([], [L-RFDB], [GMod], [SCSA], [LLLoss], [PSNR↑], [SSIM(%)↑], [MAE(%)↓], [LPIPS(%)↓], [参数量(k)]),
     [Baseline], [✓], [], [], [], [21.84], [81.56], [6.14], [19.46], [113],
     [--], [✓], [✓], [], [], [23.39], [81.83], [5.12], [19.28], [122],
     [--], [✓], [✓], [✓], [], [23.60], [82.49], [5.04], [16.76], [138],
     [$L^3$-AgriUAVNet], [✓], [✓], [✓], [✓], [24.71], [84.62], [4.58], [9.80], [138],
-  ),
+  )),
   caption: [
     $L^3$-AgriUAVNet 的消融实验结果。通过逐步引入 L-RFDB、全局调制模块（GMod）、SCSA 注意力模块以及低光重建损失（LLLoss），分析各组件对低光图像增强性能的影响。
   ],
@@ -160,12 +162,12 @@ L³-AgriUAVNet 的增强结果在亮度与颜色统计特性上均更接近白�
 ) <fig:res_task>
 
 #figure(
-  table(
+  three-line-table(table(
     columns: 5,
     table.header([Input], [Accuracy], [Macro-F1], [Macro-Precision], [Macro-Recall]),
     [Raw low-light], [0.250], [0.069], [0.040], [0.250],
     [Enhanced ($L^3$-AgriUAVNet)], [*0.355*], [*0.250*], [*0.214*], [*0.355*],
-  ),
+  )),
   caption: [
     低光条件下下游作物分类性能对比。SimpleNet 在相同训练协议下分别使用原始低光输入与增强输入进行训练和评估。
   ],
