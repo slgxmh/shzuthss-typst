@@ -14,7 +14,7 @@
   cmajor: "农业工程",
   emajor: "Agricultural Engineering",
   direction: "农业电气自动化",
-  csupervisor: "陈学庚 研究员",
+  csupervisor: "陈学庚",
   esupervisor: "Prof. Xuegeng Chen",
   date: (year: 2026, month: 6),
   degree-type: "academic",
