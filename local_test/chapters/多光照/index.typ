@@ -1,6 +1,5 @@
 #import "../../../template.typ": three-line-table
-
-= 全天候实时脱叶率吐絮率识别方法
+= 低光实时脱叶率吐絮率识别方法
 
 == 引言
 
