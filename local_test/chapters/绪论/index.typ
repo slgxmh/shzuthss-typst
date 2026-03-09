@@ -37,6 +37,7 @@
 #figure(
   three-line-table(table(
     columns: 3,
+    align: alignment.left,
     table.header([技术], [优点], [缺点]),
     [机器学习],
     [
