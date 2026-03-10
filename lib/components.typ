@@ -242,12 +242,15 @@
     cells = cells.slice(columns)
   }
 
-  return table(
-    ..meta,
-    table.hline(stroke: 0.08em),
-    header,
-    table.hline(stroke: 0.05em),
-    ..cells,
-    table.hline(stroke: 0.08em),
-  )
+  return [
+    #set text(字号.表文, top-edge: "ascender")
+    #table(
+      ..meta,
+      table.hline(stroke: 0.08em),
+      header,
+      table.hline(stroke: 0.05em),
+      ..cells,
+      table.hline(stroke: 0.08em),
+    )
+  ]
 }
