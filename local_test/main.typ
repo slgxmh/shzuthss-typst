@@ -9,7 +9,7 @@
   cheader: "石河子大学博士学位论文",
   ctitle: "基于无人机遥感的成熟期棉花脱叶率与吐絮率检测方法研究",
   etitle: "Research on Detection Methods for Defoliation and Boll Opening Rates of Mature Cotton Based on UAV Remote Sensing",
-  school: "机械电器工程学院",
+  school: "机械电气工程学院",
   cfirstmajor: "农业工程",
   cmajor: "农业工程",
   emajor: "Agricultural Engineering",
