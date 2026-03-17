@@ -45,3 +45,4 @@
 
 
 #include "绪论.typ"
+#include "数据与表型.typ"
