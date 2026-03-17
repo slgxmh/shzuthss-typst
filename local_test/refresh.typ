@@ -49,3 +49,4 @@
 #include "成熟度识别.typ"
 #include "低光.typ"
 #include "增强.typ"
+#include "全天系统.typ"
