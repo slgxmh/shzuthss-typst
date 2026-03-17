@@ -47,3 +47,4 @@
 #include "绪论.typ"
 #include "数据与表型.typ"
 #include "成熟度识别.typ"
+#include "低光.typ"
