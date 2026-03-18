@@ -50,3 +50,4 @@
 #include "低光.typ"
 #include "增强.typ"
 #include "全天系统.typ"
+#include "结论.typ"
