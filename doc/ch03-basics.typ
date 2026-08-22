@@ -1,4 +1,4 @@
-#import "../template.typ": booktab, codeblock
+#import "../template.typ": as-booktab, booktab, codeblock
 
 #let code-preview(code, result) = {
   booktab(
@@ -213,6 +213,37 @@ Typst 中定义表格使用 `table` 函数。如需标题和引用功能，同�
   ],
 )
 
+如果你更喜欢先写原生 `table`，再统一套用三线表样式，可以使用 `as-booktab`。这种写法更适合与原生 `figure` 组合，也更容易被 Tinymist 等格式化工具整理。若需要标题、编号和 `@label` 引用，请像原生表格一样继续使用 `figure(..., kind: table)` 包装。对于包含 `table.vline(...)` 或其他非单元格结构元素的表格，建议显式使用 `table.header(...)`，不要依赖 `as-booktab` 的首行表头推断。
+
+#code-preview(
+  ```typ
+  #figure(
+    as-booktab(table(
+      columns: (1fr, 1fr, 1fr),
+      align: (left, center, right),
+      table.header([左对齐], [居中], [右对齐]),
+      [4], [5], [6],
+      [7], [8], [9],
+    )),
+    caption: [三线表示例（as-booktab）],
+    kind: table,
+  ) <as-booktab-example>
+  ```,
+  [
+    #figure(
+      as-booktab(table(
+        columns: (1fr, 1fr, 1fr),
+        align: (left, center, right),
+        table.header([左对齐], [居中], [右对齐]),
+        [4], [5], [6],
+        [7], [8], [9],
+      )),
+      caption: [三线表示例（as-booktab）],
+      kind: table,
+    ) <as-booktab-example>
+  ],
+)
+
 == 公式
 
 Typst 使用 `$...$` 包裹数学公式。行内公式前后需要有空格，行间公式会自动编号：
@@ -327,7 +358,7 @@ Typst 支持 BibLaTeX 格式的 `.bib` 文件。在文档中引用文献使用 `
   [可以像这样引用参考文献@wang2010guide @kopka2004guide。],
 )
 
-使用本模板时，只需在 `conf` 函数中配置 `bibfiles` 参数即可，无需手动调用 `bibliography` 函数：
+使用本模板时，只需在 `conf` 函数中配置 `bibcontent` 等参数即可，无需手动调用 `bibliography` 函数：
 
 #codeblock(
   ```typ
@@ -337,6 +368,9 @@ Typst 支持 BibLaTeX 格式的 `.bib` 文件。在文档中引用文献使用 `
     // bibstyle: "author-date",  // 著者—出版年制
     bibversion: "2015",          // GB/T 7714-2015（默认）
     // bibversion: "2025",       // GB/T 7714-2025（2026年7月1日起实施）
+    // 以下为 author-date 专用（可选，有合理默认值）：
+    // bib-cn-first: true,       // 中文文献排在外文之前（默认）
+    // bib-pinyin-override: ("重": "chong2"), // 多音字拼音校正
     doc,
   )
   ```,
@@ -344,6 +378,8 @@ Typst 支持 BibLaTeX 格式的 `.bib` 文件。在文档中引用文献使用 `
 )
 
 根据#link("https://grs.pku.edu.cn/docs/2024-02/20240229092001843564.doc")[北京大学博士研究生学位论文格式模板(2024)]，文献索引方式可选择"顺序编码制"（`bibstyle: "numeric"`）或"著者—出版年制"（`bibstyle: "author-date"`）。
+
+著者—出版年制下，参考文献列表默认先中文、后外文；中文条目按作者姓氏的汉语拼音排序（由集成的 gb7714-bilingual 与 auto-pinyin 实现）。若个别姓氏的多音字排序不符合预期，可通过 `bib-pinyin-override` 指定读音。
 
 === 语言检测
 

@@ -22,7 +22,7 @@ Typst 是一个现代化的排版系统，可以通过以下方式使用：
 模板已发布到 Typst Universe，可以直接创建新项目：
 
 ```bash
-typst init @preview/modern-pku-thesis:0.2.2 my-thesis
+typst init @preview/modern-pku-thesis:0.2.3 my-thesis
 cd my-thesis
 ```
 
@@ -74,13 +74,12 @@ typst watch main.typ
 
   这里是第二章内容...
 
+  // 参考文献会自动排版在附录之前
   #appendix()
 
   = 附录 A 补充材料
 
   这里是附录内容...
-
-  #bibliography("ref.bib", style: "gb-7714-2015-numeric")
   ```,
   caption: "论文文件基本结构",
 )
