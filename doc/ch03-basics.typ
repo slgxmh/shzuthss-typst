@@ -1,4 +1,4 @@
-#import "../template.typ": booktab, codeblock
+#import "../template.typ": as-booktab, booktab, codeblock
 
 #let code-preview(code, result) = {
   booktab(
@@ -178,9 +178,11 @@ Typst 中定义表格使用 `table` 函数。如需标题和引用功能，同�
 
 本模板提供了 `booktab` 函数用于生成更美观的三线表。`booktab` 基于原生 `table` 实现，支持大部分 `table` 参数（`stroke` 除外），第一行自动作为表头。
 
+*引用规则*：仅当 `outlined = true`（默认）时，`booktab` 才会包装为 `figure`，此时 `caption` 生效、表格可被 `@label` 引用。设 `outlined: false` 时为纯表格，`caption` 不生效，且不能使用 `@` 引用。
+
 *注意*：本模板默认允许表格跨页显示（`show figure: set block(breakable: true)`）。如果不希望某个表格被分割，可以在表格前手动插入 `#pagebreak()` 进行调整。
 
-三线表示例：
+@booktab-example 展示了 `booktab` 的示例效果：
 
 #code-preview(
   ```typ
@@ -208,6 +210,37 @@ Typst 中定义表格使用 `table` 函数。如需标题和引用功能，同�
       [8],
       [9],
     ) <booktab-example>
+  ],
+)
+
+如果你更喜欢先写原生 `table`，再统一套用三线表样式，可以使用 `as-booktab`。这种写法更适合与原生 `figure` 组合，也更容易被 Tinymist 等格式化工具整理。若需要标题、编号和 `@label` 引用，请像原生表格一样继续使用 `figure(..., kind: table)` 包装。对于包含 `table.vline(...)` 或其他非单元格结构元素的表格，建议显式使用 `table.header(...)`，不要依赖 `as-booktab` 的首行表头推断。
+
+#code-preview(
+  ```typ
+  #figure(
+    as-booktab(table(
+      columns: (1fr, 1fr, 1fr),
+      align: (left, center, right),
+      table.header([左对齐], [居中], [右对齐]),
+      [4], [5], [6],
+      [7], [8], [9],
+    )),
+    caption: [三线表示例（as-booktab）],
+    kind: table,
+  ) <as-booktab-example>
+  ```,
+  [
+    #figure(
+      as-booktab(table(
+        columns: (1fr, 1fr, 1fr),
+        align: (left, center, right),
+        table.header([左对齐], [居中], [右对齐]),
+        [4], [5], [6],
+        [7], [8], [9],
+      )),
+      caption: [三线表示例（as-booktab）],
+      kind: table,
+    ) <as-booktab-example>
   ],
 )
 
@@ -325,7 +358,7 @@ Typst 支持 BibLaTeX 格式的 `.bib` 文件。在文档中引用文献使用 `
   [可以像这样引用参考文献@wang2010guide @kopka2004guide。],
 )
 
-使用本模板时，只需在 `conf` 函数中配置 `bibfiles` 参数即可，无需手动调用 `bibliography` 函数：
+使用本模板时，只需在 `conf` 函数中配置 `bibcontent` 等参数即可，无需手动调用 `bibliography` 函数：
 
 #codeblock(
   ```typ
@@ -335,6 +368,9 @@ Typst 支持 BibLaTeX 格式的 `.bib` 文件。在文档中引用文献使用 `
     // bibstyle: "author-date",  // 著者—出版年制
     bibversion: "2015",          // GB/T 7714-2015（默认）
     // bibversion: "2025",       // GB/T 7714-2025（2026年7月1日起实施）
+    // 以下为 author-date 专用（可选，有合理默认值）：
+    // bib-cn-first: true,       // 中文文献排在外文之前（默认）
+    // bib-pinyin-override: ("重": "chong2"), // 多音字拼音校正
     doc,
   )
   ```,
@@ -342,6 +378,8 @@ Typst 支持 BibLaTeX 格式的 `.bib` 文件。在文档中引用文献使用 `
 )
 
 根据#link("https://grs.pku.edu.cn/docs/2024-02/20240229092001843564.doc")[北京大学博士研究生学位论文格式模板(2024)]，文献索引方式可选择"顺序编码制"（`bibstyle: "numeric"`）或"著者—出版年制"（`bibstyle: "author-date"`）。
+
+著者—出版年制下，参考文献列表默认先中文、后外文；中文条目按作者姓氏的汉语拼音排序（由集成的 gb7714-bilingual 与 auto-pinyin 实现）。若个别姓氏的多音字排序不符合预期，可通过 `bib-pinyin-override` 指定读音。
 
 === 语言检测
 
@@ -383,6 +421,8 @@ gb7714-bilingual 会自动检测文献语言。如果自动检测不准确，可
 == 交叉引用
 
 Typst 使用标签 `<label>`（或`label(...)`）和引用 `@label`（或`link(dst, src)`）实现交叉引用。当原始标签引用的对象是章节、图表等时，`@label` 会自动转换为链接文本。对于一般的引用，则需要通过 `link` 函数手动创建链接文本。
+
+*图表与表格*：图片需放在 `figure` 中；`booktab` 表格需要使用 `outlined: true`（默认），才能用 `<label>` 配合 `@label` 引用。`outlined: false` 的纯表格不能作为引用目标。
 
 #code-preview(
   ```typ

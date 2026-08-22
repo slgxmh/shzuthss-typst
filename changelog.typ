@@ -9,10 +9,39 @@
   "https://github.com/pku-typst/pkuthss-typst/pull/" + str(id),
   text(fill: green.lighten(20%))[\##id],
 )
+#let pku-spec = link(
+  "https://grs.pku.edu.cn/docs/2024-02/20240229092001843564.doc",
+  "北京大学博士研究生学位论文格式模板（2024）",
+)
 
 #set enum(indent: 0em)
 #set list(indent: 0em)
 #set heading(numbering: none)
+
+== 2026-04-04 #contributors.lucifer1004 #pr(45) #pr(46) #pr(47)
+
++ 根据#pku-spec 调整了附录和参考文献的顺序：
+  - 将附录移至参考文献之后（#issue(44)）。
++ 著者—出版年制参考文献列表排序（#issue(43)）：
+  - 与 #link("https://github.com/pku-typst/gb7714-bilingual")[gb7714-bilingual] `v0.2.3` 一致：默认中文条目在外文之前，中文按作者姓氏汉语拼音排序。
+  - `conf` 新增 `bib-cn-first`、`bib-pinyin-override`，分别对应上游 `cn-first` 与多音字 `pinyin-override`。
+  - 用户指南中补充上述配置说明，并修正参考文献示例里误写的 `bibfiles`（应为 `bibcontent`）。
++ 新增 `as-booktab` 装饰函数（#issue(40)）：
+  - 可将原生 `table` 装饰为三线表样式，更适合与原生 `figure` 组合使用。
+  - 用户指南补充了 `as-booktab` 的示例与适用场景说明。
++ 移除了正文开始前的冗余 `smartpagebreak` 调用。
+
+== 2026-03-23 #contributors.lucifer1004 #pr(42)
+
++ 根据#pku-spec 调整了封面页的样式：
+  - 将"学院"改为"院系"（#issue(41)）。
+
+== 2026-02-16 #contributors.lucifer1004 #pr(38)
+
++ 修复 `booktab` 无法被 `@label` 引用（"cannot reference styled"）的问题（#issue(37)）：
+  - 将表格字号设置移入块内部，避免返回的 `figure` 被包裹为 styled 导致不可引用。
+  - 明确了只有 `outlined = true` 时的 `booktab` 才能被引用，同时 `caption` 生效。
++ 取消了表格内部的 `top-edge: "ascender"` 设置，修复了表格内中英文字体对齐的问题（#issue(37)）。
 
 == 2026-01-27 #contributors.lucifer1004 #pr(36)
 
@@ -87,7 +116,7 @@
 
 + 引入 #link("https://typst.app/universe/package/itemize/", `itemize`) 包，修复了列表编号和文本内容衬线不对齐的问题。
 + 引入 #link("https://typst.app/universe/package/cuti/", `cuti`) 包，对部分需要加粗的中文文本进行了处理。
-+ 对照 #link("https://grs.pku.edu.cn/docs/2024-02/20240229092001843564.doc", "北京大学博士研究生学位论文格式模板（2024）") 进行了若干调整：
++ 对照 #pku-spec 进行了若干调整：
   - 调整了全局的行距。
   - 调整了封面样式（#pr(19)）。
   - 调整了英文摘要的样式（#issue(20)）。

@@ -30,13 +30,17 @@
 #import "@preview/cuti:0.4.0": show-cn-fakebold
 #import "@preview/codly:1.3.0": *
 #import "@preview/codly-languages:0.1.10": *
-#import "@preview/gb7714-bilingual:0.2.1": *
+#import "@preview/gb7714-bilingual:0.2.3": *
 
 // 导入并重导出所有公共符号
 #import "lib/config.typ": appendix, 字体, 字号, 引用记号
 #import "lib/utils.typ": chinesenumbering
-#import "lib/components.typ": booktab, chineseoutline, codeblock, listoffigures
-#import "lib/styles.typ": sym-bullet, sym-square-filled, sym-square-filled-rotated
+#import "lib/components.typ": (
+  as-booktab, booktab, chineseoutline, codeblock, listoffigures,
+)
+#import "lib/styles.typ": (
+  sym-bullet, sym-square-filled, sym-square-filled-rotated,
+)
 
 // 高级用户 API：导出内部计数器和状态，用于自定义章节编号等场景
 // 注意：这些是内部实现细节，未来版本可能会有变化
@@ -103,6 +107,11 @@
   bibstyle: "numeric",
   // 引用版本（默认为 "2015"，可选 "2025"。注意 GB/T 7714-2025 标准从 2026 年 7 月 1 日开始实施）
   bibversion: "2015",
+  // 仅 bibstyle: "author-date"。true（默认）时中文条目排在外文之前；false 时外文在前（传给 gb7714-bilingual 的 cn-first）
+  bib-cn-first: true,
+  // 仅 author-date 且中文作者：多音字校正，传给 auto-pinyin 的 to-pinyin(..., override: ...)
+  // 键为汉字（字符串），值为 tone-num-end 音节串，如 ("重": "chong2")
+  bib-pinyin-override: (:),
   doc,
 ) = {
   // 命令行参数覆盖配置文件中的值
@@ -291,15 +300,9 @@
     spacing: 10.5pt,
   )
 
-  smartpagebreak()
   let use-gb7714 = not override-bib and bibcontent != none
   if use-gb7714 {
-    init-gb7714.with(
-      bibcontent,
-      style: bibstyle,
-      version: bibversion,
-    )(doc)
-    gb7714-bibliography(
+    let make-bib = () => gb7714-bibliography(
       title: heading(numbering: none)[参考文献],
       full-control: entries => {
         set text(字号.五号)
@@ -325,6 +328,19 @@
         }
       },
     )
+    show metadata.where(value: "pkuthss-appendix"): _ => make-bib()
+    init-gb7714.with(
+      bibcontent,
+      style: bibstyle,
+      version: bibversion,
+      cn-first: bib-cn-first,
+      pinyin-override: bib-pinyin-override,
+    )(doc)
+    context {
+      if query(metadata.where(value: "pkuthss-appendix")).len() == 0 {
+        make-bib()
+      }
+    }
   } else {
     show bibliography: it => styles.bibliography-show-rule(it)
     doc

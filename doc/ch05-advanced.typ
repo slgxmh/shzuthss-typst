@@ -15,7 +15,7 @@
 
 == 附录
 
-使用 `#appendix()` 命令开始附录部分。附录中的章节、图表、公式编号会自动切换为字母格式（如 A.1、A.2）：
+使用 `#appendix()` 命令开始附录部分。附录中的章节、图表、公式编号会自动切换为字母格式（如 A.1、A.2）。使用 `bibcontent` 配置参考文献时，参考文献会自动排版在附录之前：
 
 ```typ
 #appendix()
@@ -125,6 +125,7 @@ acknowledgements: include "doc/acknowledgements.typ",
 
 - `#appendix()`：开始附录部分，后续章节编号切换为字母格式
 - `#booktab(...)`：生成三线表，支持 `outlined: false` 生成不带编号的表格
+- `#as-booktab(table)`：将现有原生 `table` 装饰为三线表样式，便于和 `figure` 组合使用
 - `#codeblock(...)`：生成带标题和编号的代码块
 - `#chineseoutline(...)`：生成中文目录
 - `#listoffigures(...)`：生成图表列表

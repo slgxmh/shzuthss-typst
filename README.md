@@ -4,7 +4,7 @@
 
 感谢 https://github.com/slgxmh/shzuthss-typst 的贡献，本项目基于此开发！
 
-![cover](./images/cover.png)
+![Cover of an example thesis](./images/cover.png)
 
 📄 **[在线预览 PDF](https://pku-typst.github.io/pkuthss-typst/thesis.pdf)** | **[盲审版本](https://pku-typst.github.io/pkuthss-typst/thesis-blind.pdf)**
 
@@ -13,7 +13,7 @@
 ### 方式一：通过 Typst Universe（推荐）
 
 ```bash
-typst init @preview/modern-pku-thesis:0.2.1 my-thesis
+typst init @preview/modern-pku-thesis:0.2.3 my-thesis
 cd my-thesis
 ```
 
