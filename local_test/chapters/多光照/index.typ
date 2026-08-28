@@ -163,13 +163,13 @@ $ L_("color") = frac(1, B) sum_(i=1)^B ‖ r(y_i) - r(t_i) ‖_1 $
 
 === 实验设置
 
-上游低光增强实验在配备 NVIDIA GeForce RTX 4090（24 GB 显存）的工作站上完成，下游检测实验运行于配备 NVIDIA GeForce RTX 5090 的 AutoDL 云服务器，软件环境为 Ubuntu 22.04、Python 3.12、PyTorch 2.8.0 和 CUDA 12.8。所有模型使用相同的成对数据与训练、验证和测试索引，输入输出均为归一化至 $[0, 1]$ 的 RGB 图像，训练 patch 尺寸为 $224 times 224$，随机种子固定为 42。
+上游低光增强实验在配备 NVIDIA GeForce RTX 4090（24 GB 显存）的工作站上完成，下游检测实验运行于配备 NVIDIA GeForce RTX 5090 的 AutoDL 云服务器，软件环境为 Ubuntu 22.04、Python 3.12、PyTorch 2.8.0 和 CUDA 12.8。所有模型使用相同的成对数据与训练、验证和测试索引，输入输出均为归一化至 $[0, 1]$ 的 RGB 图像，训练图像块尺寸为 $224 times 224$，随机种子固定为 42。
 
-上游模型使用 Adam 优化器@kingma2014adam，恒定学习率 $10^(-4)$，$beta_1 = 0.9$，$beta_2 = 0.999$，$epsilon = 10^(-8)$，不使用权重衰减。batch size 按各模型显存需求选取：Restormer 为 4，LLFormer、Retinexformer、Uformer 与 $L^3$-AgriUAVNet 为 16，HVI-CIDNet 为 32，RFDN 与 SCI 为 64。最大 epoch 设置为 HVI-CIDNet 与 RFDN 各 10 个、其余模型 200 个；所有模型每 0.2 个 epoch 进行一次验证，并以 3 次验证检查为早停耐心选取验证损失最小的检查点，早停均在两个完整 epoch 之前触发，因此最大 epoch 设置未构成实际约束。固定测试集包含 3265 个 patch；真实场景评价采用 308 个真实低光玉米苗 patch，与第 5 章用于退化参数标定的 26 张棉花低光影像相互独立。低光成对数据的构建流程与统计对齐验证见第 5 章，本章不再赘述。
+上游模型使用 Adam 优化器@kingma2014adam，恒定学习率 $10^(-4)$，$beta_1 = 0.9$，$beta_2 = 0.999$，$epsilon = 10^(-8)$，不使用权重衰减。batch size 按各模型显存需求选取：Restormer 为 4，LLFormer、Retinexformer、Uformer 与 $L^3$-AgriUAVNet 为 16，HVI-CIDNet 为 32，RFDN 与 SCI 为 64。最大 epoch 设置为 HVI-CIDNet 与 RFDN 各 10 个、其余模型 200 个；所有模型每 0.2 个 epoch 进行一次验证，并以 3 次验证检查为早停耐心选取验证损失最小的检查点，早停均在两个完整 epoch 之前触发，因此最大 epoch 设置未构成实际约束。固定测试集包含 3265 个图像块；真实场景评价采用 308 个真实低光玉米苗图像块，与第 5 章用于退化参数标定的 26 张棉花低光影像相互独立。低光成对数据的构建流程与统计对齐验证见第 5 章，本章不再赘述。
 
 下游玉米苗检测采用 Ultralytics 8.4.82 实现的 YOLOv8n 和 YOLOv8s@jocher2023yolov8，分别作为轻量和均衡检测器的代表。图像缩放至 $512 times 512$，每个 LabelMe 点标注表示一株玉米苗的中心；训练前，每个点被转换为以该点为中心的固定正方形边界框，归一化宽度和高度均为 0.04（在 $512 times 512$ 分辨率下约为 $20.5 times 20.5$ 像素），与图像边界相交的框裁剪至有效图像范围。Raw 与各增强方法对应的输入分布使用相同的转换后标注。每个检测器训练 75 个 epoch，早停耐心为 20；YOLOv8n 批量大小 256，YOLOv8s 批量大小 128。所有送入检测器的输入遵循相同训练流程，以减少检测器训练协议差异造成的混杂。
 
-增强质量采用 PSNR、SSIM@wang2004ssim、MAE 与 LPIPS@zhang2018unreasonable 四项标准指标评价，每项指标先在每个测试 patch 上独立计算，再在固定测试集上取算术均值。真实低光图像缺少严格配对的正常曝光参考，因此采用无参考自然度、曝光与通道关系以及结构响应三类互补指标：NIQE@mittal2013niqe 与 BRISQUE@mittal2012brisque 得分越低表示图像统计越接近高质量自然图像先验；欠曝像素比例定义为亮度低于 $10 \/ 255$ 的像素占比；RGB 通道均衡偏差刻画三通道全局均值的相对偏置；结构响应由 Tenengrad（$3 times 3$ Sobel 梯度幅值的像素均值）、边缘密度（Canny 算法@canny1986edge 在低、高阈值 50 和 150 下的边缘像素比例）和局部对比度（$7 times 7$ 邻域灰度标准差的像素均值）描述，三者用于描述结构变化，不设单调的最优方向。模型复杂度由总参数量和推理计算量共同表征，计算量通过 THOP 在 evaluation mode、batch size 为 1、输入尺寸 $1 times 3 times 224 times 224$ 的统一条件下统计，并以 GMACs 报告。方法间差异使用同一测试 patch 上的配对统计进行分析，报告以 patch 为单位的 paired-bootstrap 置信区间和 Holm 校正 $p$ 值；文中报告的方法间差异均由未四舍五入的指标值计算，表中数值为显示用四舍五入结果。
+增强质量采用 PSNR、SSIM@wang2004ssim、MAE 与 LPIPS@zhang2018unreasonable 四项标准指标评价，每项指标先在每个测试图像块上独立计算，再在固定测试集上取算术均值。真实低光图像缺少严格配对的正常曝光参考，因此采用无参考自然度、曝光与通道关系以及结构响应三类互补指标：NIQE@mittal2013niqe 与 BRISQUE@mittal2012brisque 得分越低表示图像统计越接近高质量自然图像先验；欠曝像素比例定义为亮度低于 $10 \/ 255$ 的像素占比；RGB 通道均衡偏差刻画三通道全局均值的相对偏置；结构响应由 Tenengrad（$3 times 3$ Sobel 梯度幅值的像素均值）、边缘密度（Canny 算法@canny1986edge 在低、高阈值 50 和 150 下的边缘像素比例）和局部对比度（$7 times 7$ 邻域灰度标准差的像素均值）描述，三者用于描述结构变化，不设单调的最优方向。模型复杂度由总参数量和推理计算量共同表征，计算量通过 THOP 在 evaluation mode、batch size 为 1、输入尺寸 $1 times 3 times 224 times 224$ 的统一条件下统计，并以 GMACs 报告。方法间差异使用同一测试图像块上的配对统计进行分析，报告以图像块为单位的 paired-bootstrap 置信区间和 Holm 校正 $p$ 值；文中报告的方法间差异均由未四舍五入的指标值计算，表中数值为显示用四舍五入结果。
 
 === 综合性能分析
 
@@ -196,7 +196,7 @@ $ L_("color") = frac(1, B) sum_(i=1)^B ‖ r(y_i) - r(t_i) ‖_1 $
 
 从@tab:overall 可见，$L^3$-AgriUAVNet 的 SSIM 为 0.893，为全表最优；PSNR 为 26.24 dB，较 Restormer 高 0.09 dB，距 LLFormer 仅 0.30 dB，总体处于重型 Transformer 同档水平。与此同时，其参数量仅为 0.139 M，为 LLFormer 的 1/42、Retinexformer 的 1/15、RFDN 的 1/2.7；MACs 为 6.252 G，约为 LLFormer、Retinexformer 与 RFDN 的 40%、40% 与 36%。统一条件下，模型的 ONNX 文件大小为 0.79 MiB，明显小于 LLFormer（22.62 MiB）、Retinexformer（8.30 MiB）与 RFDN（1.45 MiB）。这表明该方法在远小于主流基线的计算预算下，取得了与重型 Transformer 相当的重建精度。
 
-逐 patch 配对统计进一步支持这一结果。相对 Restormer，$L^3$-AgriUAVNet 的 PSNR 平均提高 0.0878 dB（95% paired bootstrap CI $[0.0470, 0.1301]$，Holm 校正 $p = 0.0105$），SSIM 提高 0.0271（$p < 0.001$）；与 LLFormer 相比，其 PSNR 低 0.2977 dB、SSIM 高 0.00555，而 MAE 和 LPIPS 更偏向 LLFormer。由此可见，$L^3$-AgriUAVNet 的优势并非单一指标最大化，而是在显著压缩模型规模的同时维持有竞争力的像素保真度并获得最高结构相似性。
+逐图像块配对统计进一步支持这一结果。相对 Restormer，$L^3$-AgriUAVNet 的 PSNR 平均提高 0.0878 dB（95% paired bootstrap CI $[0.0470, 0.1301]$，Holm 校正 $p = 0.0105$），SSIM 提高 0.0271（$p < 0.001$）；与 LLFormer 相比，其 PSNR 低 0.2977 dB、SSIM 高 0.00555，而 MAE 和 LPIPS 更偏向 LLFormer。由此可见，$L^3$-AgriUAVNet 的优势并非单一指标最大化，而是在显著压缩模型规模的同时维持有竞争力的像素保真度并获得最高结构相似性。
 
 进一步从指标含义看，PSNR 和 SSIM 更多反映像素重建精度与整体结构相似性，而 LPIPS 更关注深层感知空间中的语义和纹理一致性。对于农业 UAV 低光增强任务而言，仅依赖 PSNR 提升并不足以保证下游识别收益，因为如果模型通过过度平滑换取更高像素一致性，叶缘、铃壳裂缝、棉絮边界和行间纹理等与表型判别直接相关的局部证据反而可能被削弱。$L^3$-AgriUAVNet 在 SSIM 最优的同时将 LPIPS 控制在 0.119，与最优方法（LLFormer 0.103、Restormer 0.105）处于同一水平，表明该网络更倾向于保留对下游语义判别有价值的结构性细节，而不是简单地执行亮度拉伸或纹理均值化处理。这一点与后续下游玉米苗检测实验中 mAP 的提升结果相互印证。
 
@@ -270,7 +270,7 @@ $L^3$-AgriUAVNet 的结构选择由农业 UAV 前端的参数预算驱动。由�
 
 网络深度与宽度同样存在明确的适配区间。depth=1、depth=4 和 width=64 配置的 PSNR 分别为 24.48、24.43 和 24.66 dB，均低于默认的 depth=2/width=48；depth=3 或 width=32 也造成中度下降。这一结果说明，当前参数预算下的最优配置来自适度宽度与有限深度的平衡，而非简单增加层数或通道数；过深或过宽的主干会引入优化困难与过拟合风险，性能提升来源于模块协同设计与合理的复杂度配置，而非简单参数堆叠。
 
-配对统计与点估计保持一致。$L^3$-AgriUAVNet 相对 $L^3$-AgriUAVNet-DW 的逐 patch PSNR 平均提高 0.5366 dB（95% bootstrap CI $[0.5102, 0.5628]$，Holm 校正 $p < 0.001$）；相对移除 ESA、HVI 和 GMod 的变体，增益分别为 0.6518、1.7276 和 2.6199 dB。所有变体共享同一测试索引，进一步确认了各组件与卷积配置的稳定贡献。
+配对统计与点估计保持一致。$L^3$-AgriUAVNet 相对 $L^3$-AgriUAVNet-DW 的逐图像块 PSNR 平均提高 0.5366 dB（95% bootstrap CI $[0.5102, 0.5628]$，Holm 校正 $p < 0.001$）；相对移除 ESA、HVI 和 GMod 的变体，增益分别为 0.6518、1.7276 和 2.6199 dB。所有变体共享同一测试索引，进一步确认了各组件与卷积配置的稳定贡献。
 
 === 真实低光图像测试
 
@@ -297,7 +297,7 @@ $L^3$-AgriUAVNet 的结构选择由农业 UAV 前端的参数预算驱动。由�
   kind: table,
 ) <tab:real_no_ref>
 
-在 308 个真实低光玉米苗 patch 上，定性结果与无参考统计从互补维度刻画了增强效果（@fig:real 和@tab:real_no_ref）。$L^3$-AgriUAVNet 将平均欠曝像素比例从 23.74% 降至近 0，RGB 通道均衡偏差由 0.0346 降至 0.0233（降低约 32.5%），BRISQUE 也从 52.21 降至 48.58。阈值化的欠曝像素比例在所有增强输出上均接近 0，因此该指标用于验证欠曝的消除，而非对增强方法排序。RFDN 的 RGB 通道均衡偏差反而升至 0.0611，说明可见度改善并不必然伴随全局通道关系的校正。
+在 308 个真实低光玉米苗图像块 上，定性结果与无参考统计从互补维度刻画了增强效果（@fig:real 和@tab:real_no_ref）。$L^3$-AgriUAVNet 将平均欠曝像素比例从 23.74% 降至近 0，RGB 通道均衡偏差由 0.0346 降至 0.0233（降低约 32.5%），BRISQUE 也从 52.21 降至 48.58。阈值化的欠曝像素比例在所有增强输出上均接近 0，因此该指标用于验证欠曝的消除，而非对增强方法排序。RFDN 的 RGB 通道均衡偏差反而升至 0.0611，说明可见度改善并不必然伴随全局通道关系的校正。
 
 结构响应指标进一步揭示了增强前后的表观变化：Tenengrad 从 33.16 提高至 102.87，边缘密度和局部对比度同步增加，说明叶片边缘和局部纹理响应得到强化。$L^3$-AgriUAVNet 的 NIQE 为 8.43，与 Raw 的 8.15 接近，而 LLFormer 和 Retinexformer 分别在部分指标上取得更优结果（如 LLFormer 的 RGB 均衡偏差为 0.0167，Retinexformer 的 BRISQUE 为 47.29）。NIQE 与 BRISQUE 之间的分歧进一步支持将无参考指标联合解读，而不是把任一分数当作独立的增强排序依据。结合@fig:real 的视觉结果，这些统计共同表明 $L^3$-AgriUAVNet 在校正欠曝和全局通道偏差的同时保持了较强的结构响应。
 
@@ -312,7 +312,7 @@ $L^3$-AgriUAVNet 的结构选择由农业 UAV 前端的参数预算驱动。由�
   ],
 ) <fig:res_task>
 
-下游检测作为同一玉米苗低光数据集上的第二种评价路径，用于考察增强表征的农业应用价值。@fig:res_task 展示了有代表性的 YOLOv8n 检测示例及汇总比较。按照实验设置中的统一协议，YOLOv8n@jocher2023yolov8 分别在 Raw、$L^3$-AgriUAVNet、RFDN、LLFormer 和 Retinexformer 输入分布上训练与测试，测试集包含 139 个 patch。实验并非追求最优检测精度，而是考察增强前端是否能恢复有助于农业语义判别的视觉表征。
+下游检测作为同一玉米苗低光数据集上的第二种评价路径，用于考察增强表征的农业应用价值。@fig:res_task 展示了有代表性的 YOLOv8n 检测示例及汇总比较。按照实验设置中的统一协议，YOLOv8n@jocher2023yolov8 分别在 Raw、$L^3$-AgriUAVNet、RFDN、LLFormer 和 Retinexformer 输入分布上训练与测试，测试集包含 139 个图像块。实验并非追求最优检测精度，而是考察增强前端是否能恢复有助于农业语义判别的视觉表征。
 
 #figure(
   three-line-table(table(
