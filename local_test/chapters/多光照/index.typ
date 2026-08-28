@@ -1,118 +1,276 @@
 #import "../../../template.typ": three-line-table
-= 低光实时脱叶率吐絮率识别方法
+= 低光增强与多光照鲁棒识别方法
 
 == 引言
 
-在前两章基础上，本研究进一步构建适用于多光照条件的统一识别模型，重点讨论跨域鲁棒性、端侧效率和系统可扩展性。
+无人机平台能够快速获取大面积农田的高分辨率 RGB 影像，为作物生长评估、病虫害巡查和表型分析提供高时空分辨率数据@guebsi2024drones @aierken2024review。然而，低光或夜间成像常伴随整体曝光不足、噪声增强、对比度下降和色彩偏移@widartono2025aerial @fu2022highlightnet，从而削弱检测、分割和计数等下游视觉任务的稳定性@silwal2021robust。农业影像还包含复杂地表背景和细粒度作物纹理，因此低光增强不仅要恢复辐射信息，还需保持幼苗边界和作物行等关键结构。
 
-上一章完成了低光成对数据的合成与统计对齐验证（训练对生成流程见@fig:lowlight_pairgen），为本研究提供了可控训练数据基础。基于该数据基础，本研究将低光增强模块纳入全天候识别链路：先通过轻量增强网络在低色偏敏感的色彩空间中恢复低照度图像的结构与颜色信息，再在增强后的输入上进行脱叶率与吐絮率联合识别，从而提升弱光场景下的端侧稳定性。
+低光时段同样是农业 UAV 作业的重要窗口。低光巡田、应急病虫害巡检和生育阶段检查具有较强的时效性，而温度、风速以及人员和机具配置会共同影响航拍调度，清晨和傍晚因而可作为补充采集时段。已有昼夜 UAV LiDAR 研究表明，作物表征能够跨日夜时段开展@flynn2026assessing，进一步说明了低光条件下获取农业观测的实际需求。
 
-全天候多光照数据集的融合与均衡规则见@chap:dataset，本章重点介绍增强模型结构、损失设计与整链路效果评估。
+棉花等大田作物在生长中后期冠层变化迅速，且大面积田块通常具有明显的地表异质性@bendig2015combining @yang2017unmanned @xu2019multispectral。低光影像中的噪声和照明变化会进一步传递到下游模型，降低目标定位与分类的稳定性@silwal2021robust @tsekhmystro2025uav，进而影响农业决策结果的一致性与可解释性。
 
-== 自适应低光图像增强模型构建
+低光无人机影像的退化来自多个成像环节。低照度迫使相机延长曝光时间或提高增益，从而放大传感器噪声；平台振动与飞行速度则增加运动模糊风险@kurimo2009effect。相机 ISP 的降噪和锐化还可能引入纹理涂抹与伪影@li2021low。此外，农业 UAV 低光影像常呈现显著的空间非均匀照明@lu2025unsupervised，进一步加剧局部对比度和颜色一致性的波动。这些退化相互耦合，使简单提亮容易产生噪声放大、结构模糊和色彩失真。
+
+因此，农业 UAV 低光增强需要同时满足三个目标：提高可见度并抑制噪声和伪影，保持叶片边缘与作物纹理等结构信息，控制不同田块和采集批次之间的颜色与亮度漂移。考虑到机载和边缘端的资源限制，模型还需在较小参数量与计算预算下提供稳定、及时的推理，为检测、分割、计数和表型分析提供可靠输入。
+
+现有低光增强方法主要包括基于物理先验的 Retinex 方法和基于深度学习的端到端方法。Retinex 方法依赖光照–反射分解假设@land1971retinex，在田间非均匀光照和复杂反射条件下容易出现过增强或色彩偏移。LLFormer@wang2023llformer、Restormer@zamir2022restormer 和 Retinexformer@cai2023retinexformer 等 Transformer 模型在通用基准上取得了较高的恢复质量，但数百万级参数量和较高推理延迟限制了其边缘部署。监督式深度 Retinex 方法通过联合估计光照与反射改善分解能力，其计算需求对机载平台仍然较高@wei2018retinex @yi2023diffretinex @bai2024retinexmamba。此外，通用低光数据与农业 UAV 场景之间存在明显域差异，直接迁移可能导致作物纹理涂抹和边缘不稳定。
+
+#figure(
+  image("fig1_scenario.png", width: 100%),
+  caption: [
+    农业 UAV 低光成像问题。图中通过田间影像和图像块级统计展示低光条件下的强度压缩、局部对比度下降和通道比例偏移。真实低光图像块来自 26 张棉花低光校准影像的裁剪样本，图像块数量不等同于原始影像数。
+  ],
+) <fig:l3_scenario>
+
+除模型能力外，数据可获得性对农业低光增强构成了更根本的约束。主流有监督方法依赖空间对齐的低光/正常曝光图像对，这类数据通常由固定相机在静态场景中采集@wei2018retinex。田间条件几乎无法满足这一要求：冠层随风摆动，阴影模式随太阳位置在数分钟内改变，作物形态逐日变化，且不同架次的 UAV 视角无法精确复现，因此对同一田块分别采集的低光与正常曝光影像难以进行可靠的像素级配准，LOL 式的田间配对采集并不可行。实际可选途径包括不依赖显式重建目标的零参考或无监督训练@ma2022sci，以及构造天然严格对齐的合成配对数据。本章选择后者，通过校准图像域退化流程由正常曝光 UAV 影像生成对应的低光输入。
+
+如@fig:l3_scenario 所示，农业 UAV 低光影像存在强度压缩、通道比例偏移和局部对比度损失，幼苗边界与作物行因而变得模糊难辨。清晨和傍晚作业可提供补充采集时段，但其影像只有在预处理流程满足三项相互关联的农业要求时才有价值：必须能够在缺少严格对齐正常曝光参考的条件下训练，必须保持与任务相关的作物结构和通道关系，并且必须在边缘计算预算内运行，同时不能假定所有下游检测器都能同等受益于增强。因此，实际问题并不简单是哪种方法能最大化某一图像质量指标，而是低光预处理应如何与农业采集条件、部署资源和检测器容量联合配置。
+
+为支持这些低光补充时段所采集影像的有效利用，本章建立了以 $L^3$-AgriUAVNet 为核心的容量感知型预处理框架。该网络提供紧凑的增强前端，而校准数据构建、真实场景评价、设备端推理和下游检测则共同构成决定何时启用该前端所需的证据。其中，$L^3$ 表示 _Lightweight Low-Light_ 中的三个字母 L。主要贡献如下：
+
++ 构建校准图像域退化流程，在严格对齐的农业 UAV 参考不可获得时提供可控的配对监督。其参数范围由真实低光统计分布与视觉观感人工标定，并保留独立的玉米苗低光影像用于真实场景评价。
++ 构建在边缘计算约束下保持细粒度农业结构的资源高效预处理前端。$L^3$-AgriUAVNet 采用单流 HVI 表征、两个 48 通道 RFDN-S、精简 ESA 和一次自条件全局仿射调制，形成 0.139 M 参数配置；系统消融与设备端测试展示了其质量–效率工作点。
++ 建立覆盖合成配对恢复、真实低光无参考评价、iPad 上基于 WebGPU 的 ONNX Runtime Web 推理以及 YOLOv8n/YOLOv8s 检测的应用证据链。检测器响应的差异被转化为容量感知型选择规则，用于决定农业视觉管线中是否启用增强。
+
+上述工作共同将轻量增强定位为低光农业 UAV 监测的使能组件，而非孤立的复原环节。该框架将数据获取、结构保持、计算预算和检测器容量联系起来，支持农业约束下面向部署的预处理决策。
+
+== 材料与方法
+
+#figure(
+  image("fig2_degradation.png", width: 100%),
+  caption: [
+    校准图像域退化流程及统计对齐。正常曝光 RGB 图像块依次经过曝光衰减、通道增益、Poisson–Gaussian 噪声、色调/gamma 变换、模糊和暗角后生成低光输入。亮度、饱和度与 RGB 比例分布使用 $n = 128$ 个图像块样本比较正常曝光、合成低光与真实低光的统计区间，其中真实低光样本裁剪自 26 张棉花低光校准影像；这些统计区间为退化参数的人工标定提供定量参照。
+  ],
+) <fig:l3_degradation>
+
+研究流程如@fig:l3_degradation 所示。正常曝光无人机影像经多尺度抖动裁剪、随机旋转和水平翻转后形成目标图像块，再通过校准图像域退化生成对应的低光输入。由此得到配对样本 $(x, t)$，其中 $x$ 表示退化后的低光输入，$t$ 表示正常曝光目标；随机缩放、曝光衰减、噪声和轻度模糊共同覆盖不同飞行高度与成像条件下的外观变化。
+
+=== 研究区域
+
+#figure(
+  image("area.png", width: 90%),
+  caption: [
+    研究区域概览。(a) 研究区域在中国新疆沙湾市的地理位置；(b) 开放田间实验区无人机正射影像，L1、L2、L3 表示不同作物地块；(c)–(e) 分别为 L1（小麦）、L2（棉花）、L3（玉米）的地面照片。研究区域为具有典型农业种植结构和自然光照条件的开放田间环境。
+  ],
+) <fig:l3_area>
+
+研究区域位于中国新疆沙湾市周边农田（@fig:l3_area）。该区域属温带大陆性气候，年降水量为 125.9–207.0 mm，水资源相对匮乏且昼夜温差较大。不同地块的冠层形态、土壤背景和光照条件共同形成了多样的亮度与噪声分布。全部影像均采集自农户管理的生产田块，能够反映实际种植条件下的地表背景、行结构和管理差异。
+
+全部航拍影像均由 DJI Mavic 3M（DJI，中国深圳）的机载 RGB 相机采集。航线采集过程中，飞行规划高度自动调整，以维持约 10 mm/pixel 的目标地面采样距离。用于退化参数标定的真实低光棉花影像和用于真实场景评价的玉米苗影像，均拍摄于晴朗或多云条件下的清晨或傍晚作业时段。
+
+正常曝光影像采集于 2025 年 5 月 6 日至 6 月 12 日，覆盖小麦、棉花和玉米的多个生育阶段。经多时相巡检任务均匀抽样后，共选取 1306 张原始无人机影像作为配对低光数据集的数据源。
+
+另采集 26 张真实低光棉花无人机影像，用于校准退化参数并对齐亮度、饱和度和通道比例分布。
+
+=== 校准图像域退化
+
+严格对齐的正常–低光农业影像难以获取。为构建可控的训练与评估数据，本章设计了受低光成像和图像信号处理（ISP）现象启发的校准图像域退化流程（calibrated image-domain degradation，@fig:l3_degradation）。其中，“calibrated”表示以 26 张真实低光棉花 UAV 影像为参照，结合统计分布与视觉观感人工调整各参数的采样范围；该过程属于经验标定，而非通过数值优化反演相机参数。“image-domain”则表示退化直接作用于相机处理后的 RGB 图像。
+
+给定正常曝光的 8-bit RGB 图像块 $bold(I) in [0, 255]^(H times W times 3)$，首先将其归一化为
+
+$ bold(X) = frac(bold(I), 255) in [0, 1]^(H times W times 3). $
+
+归一化图像块 $bold(X) in [0, 1]^(H times W times 3)$ 依次经过欠曝、白平衡漂移、Poisson–Gaussian 噪声以及轻度 ISP/光学退化（模糊和暗角），生成低光观测 $bold(Y)$。整体过程表示为
+
+$ bold(Y) = cal(V)(cal(B)(Gamma_gamma (T_tau (cal(N)(cal(W)(alpha bold(X))))))), $
+
+其中 $cal(W)$ 表示通道增益（白平衡），$cal(N)$ 表示噪声注入，$T_tau$ 和 $Gamma_gamma$ 分别表示色调映射和 gamma 映射，$cal(B)$ 表示轻度模糊，$cal(V)$ 表示暗角（径向光照衰减）。各算子及其参数采样范围如下。
+
+_曝光衰减。_ 低照度下的有效曝光不足会压缩整体信号幅度，本章采用线性缩放近似这一过程：
+
+$ bold(X)_e = alpha bold(X), quad alpha ∼ cal(U)(0.08, 0.30), $
+
+_通道增益（白平衡/ISP 色彩偏置）。_ 低光 ISP 的白平衡和通道增益漂移通过向量 $bold(g) = (g_r, g_g, g_b)$ 建模，并按通道逐元素缩放：
+
+$ bold(X)_(w b) = cal(W)(bold(X)_e) = bold(X)_e dot.o bold(g), quad g_c ∼ cal(U)(g_(c, min), g_(c, max)), med c in {r, g, b}. $
+
+本章设置 $g_r ∼ cal(U)(1.05, 1.18)$，$g_g ∼ cal(U)(0.95, 1.03)$，$g_b ∼ cal(U)(0.98, 1.06)$，随后进行裁剪以保证数值稳定：
+
+$ bold(X)_(w b) arrow.l op("clip")(bold(X)_(w b), 0, 1). $
+
+_Poisson–Gaussian 噪声（散粒噪声 + 读出噪声）。_ 低光噪声通常包含信号相关的散粒噪声和信号无关的读出噪声，本章采用 Poisson–Gaussian 模型近似：
+
+$ bold(X)_p = frac(1, k) op("Poisson")(k bold(X)_(w b)), quad k ∼ cal(U)(30, 100), $
+
+其中较小的 $k$ 对应更强的相对散粒噪声强度。读出噪声由零均值高斯项表示：
+
+$ bold(X)_n = bold(X)_p + epsilon, quad epsilon ∼ cal(N)(0, sigma_r^2), quad sigma_r ∼ cal(U)(0.004, 0.020) $
+
+最终结果裁剪到 $[0, 1]$，以满足强度范围约束。
+
+_色调映射 + gamma。_ ISP 色调曲线和 RGB 显示端的非线性响应采用幂律色调与 gamma 变换近似：
+
+$ bold(X)_t = T_tau (bold(X)_n) = bold(X)_n^tau, quad tau ∼ cal(U)(0.90, 1.05), $
+
+$ bold(X)_g = Gamma_gamma (bold(X)_t) = bold(X)_t^gamma, quad gamma ∼ cal(U)(1.2, 1.8). $
+
+_轻度模糊。_ 低光 ISP 降噪、轻微离焦和运动会造成细节软化，因此采用高斯核近似点扩散函数（PSF）：
+
+$ bold(X)_b = cal(B)(bold(X)_g) = bold(X)_g * cal(G)(sigma_b), quad sigma_b ∼ cal(U)(0.00, 0.60), $
+
+当 $sigma_b = 0$ 时，该算子退化为恒等映射。
+
+_暗角/光照衰减。_ 镜头暗角和空间非均匀光照由径向衰减掩膜 $M(bold(p))$ 表示。设归一化坐标 $tilde(x), tilde(y) in [-1, 1]$，且 $r^2 = tilde(x)^2 + tilde(y)^2$，则
+
+$ M(bold(p)) = 1 - s dot op("clip")(r^2, 0, 1), quad s ∼ cal(U)(0.00, 0.15), $
+
+且
+
+$ bold(Y) = cal(V)(bold(X)_b) = bold(X)_b dot.o M(bold(p)). $
+
+_8-bit 量化。_ 最终结果经裁剪后量化至 8-bit 空间：
+
+$ bold(Y)_8 = op("round")(255 dot op("clip")(bold(Y), 0, 1)). $
+
+@tab:l3_degradation_calibration 汇总了各退化算子的参数范围及人工标定依据。亮度、饱和度、R/G 与 B/G 比值和通道离散度为曝光、色调与通道增益提供定量参照；噪声、细节软化和空间光照衰减则主要依据真实影像的局部观感进行调整。@fig:l3_degradation 使用 128 个正常曝光、合成低光和真实低光图像块展示标定后的分布关系。
+
+#figure(
+  three-line-table(table(
+    columns: 4,
+    table.header([退化算子], [参数], [采样范围], [主要标定依据]),
+    [曝光衰减], [$alpha$], [$[0.08, 0.30]$], [亮度分布、暗区比例与整体可见度],
+    [RGB 通道增益], [$g_r, g_g, g_b$], [$[1.05, 1.18]$；$[0.95, 1.03]$；$[0.98, 1.06]$], [R/G、B/G、饱和度及通道离散度分布与综合色偏观感],
+    [Poisson–Gaussian 噪声], [$k, sigma_r$], [$[30, 100]$；$[0.004, 0.020]$], [暗区噪声颗粒、局部纹理与平坦区域观感],
+    [色调与 gamma], [$tau, gamma$], [$[0.90, 1.05]$；$[1.2, 1.8]$], [亮度和饱和度分布与暗部层次观感],
+    [高斯模糊], [$sigma_b$], [$[0.00, 0.60]$], [叶片边缘和细粒度纹理的软化程度],
+    [暗角衰减], [$s$], [$[0.00, 0.15]$], [真实影像中的空间非均匀照明观感],
+  )),
+  caption: [
+    校准图像域退化的参数范围与人工标定依据。所有范围均参照 26 张真实低光棉花 UAV 影像，通过统计分布和视觉观感联合调整。
+  ],
+  kind: table,
+) <tab:l3_degradation_calibration>
+
+标定后的各参数在相应区间内均匀采样，以扩展退化组合并提高训练数据多样性。该流程覆盖曝光衰减、通道偏置、Poisson–Gaussian 噪声、非线性色调、轻度模糊和暗角等主要图像域退化；RAW 传感器响应与去马赛克过程留待后续物理成像研究进一步建模。
+
+=== 数据集构建
+
+数据集采用“合成配对训练与真实低光评价”相结合的设计。影像数量对应源影像、标定影像和评价图像块三个不同层级，各自承担不同的实验功能。
+
+合成配对数据来源于在研究区域内邻近采集日期的航线飞行任务中选取的 1306 张正常曝光 UAV 原始影像，覆盖小麦、棉花和玉米的多时相冠层形态、行结构、土壤背景与光照变化。多尺度裁剪、随机旋转和翻转用于生成正常曝光目标图像块并扩展飞行高度、航向和视角变化；随后依据校准图像域退化流程生成对应的低光输入，构成低光/正常曝光配对样本 $(x, t)$。配对数据以图像块为抽样单位，在固定随机种子 42 下按 0.8/0.1/0.1 划分为训练集、验证集和测试集，固定测试集包含 3265 个图像块。所有对比模型与消融变体使用同一组划分索引，因此 3265 表示由 1306 张源影像构建的测试样本数量，而非额外采集的原始航片数量。由于图像块采样自共享的源影像，图像块级划分可能使同一场景的图像块进入不同子集，因此绝对分数应视为偏乐观的域内估计，而共享的划分索引保证了所有方法间比较的内部公平性。
+
+航线拍摄实现了田块的连续覆盖，代表了规模化作物生产中遇到的空间连续性。相应地，固定图像块级划分被用作受控的域内协议，用于在目标农业成像环境内比较增强方法。对所有对比模型和消融变体应用相同的划分索引，可保持训练与评价条件一致，从而隔离出可归因于被评价方法本身的差异。
+
+退化参数标定采用另外采集的 26 张真实低光棉花 UAV 原始影像，依据亮度、饱和度、RGB 通道比例分布和视觉观感人工调整采样范围。这 26 张影像仅用于标定，不参与模型训练及后续玉米苗评价。@fig:l3_degradation 显示，合成样本覆盖了真实低光影像的暗强度与通道比例区间，表明校准参数能够刻画当前农业场景的主要低光统计特征。
+
+真实场景评价采用玉米苗低光 UAV 影像裁剪得到的图像块，并与上述 26 张棉花低光标定影像相互独立。同一玉米苗数据支持两条互补的评价路径：其一，在 308 个缺少严格配对正常曝光 ground truth 的真实低光图像块上，结合定性观察和无参考指标评价图像质量；其二，使用由幼苗中心点标注转换得到的检测框训练 YOLOv8n，并在固定的 139 个测试图像块上评价检测性能。两条路径分别衡量增强图像的视觉质量和农业任务适用性。
+
+下游实验将输入图像统一缩放至 $512 times 512$，训练、验证和测试划分在 Raw 及各增强方法对应的输入分布间保持一致。各增强方法先处理低光输入，再分别训练对应的检测器，以比较不同增强输入对任务性能的影响。这一分布匹配协议在适配之后评价各增强器–检测器管线，避免了对仅使用 Raw 输入训练的检测器施加仅测试阶段的分布偏移。
+
+=== 网络架构
 
 #figure(
   image("fig3_architecture.png", width: 100%),
   caption: [
-    $L^3$-AgriUAVNet 及其核心模块。(a) 总体增强路径：RGB 输入经 HVI 变换、$3 times 3$ 头部卷积、两个 RFDN-S、全局调制和 HVI 空间残差重建后转回 RGB；(b) RFDN-S 通过三级逐步特征蒸馏获得 $d_1, d_2, d_3$，再将最后变换特征 $r_4$ 与其拼接，经 $1 times 1$ 融合、ESA 和局部残差输出；(c) ESA 通过通道压缩、下采样空间编码和上采样生成像素级注意力；(d) GMod 使用全局平均池化与 MLP 预测逐通道增益和偏置。$L^3$-AgriUAVNet 使用两个块、48 通道、0.25 蒸馏比和标准卷积，共 0.139 M 参数。
+    $L^3$-AgriUAVNet 及其核心模块。(a) 总体增强路径：RGB 输入经 HVI 变换、$3 times 3$ 头部卷积、两个 RFDN-S、全局调制和 HVI 空间残差重建后转回 RGB。(b) RFDN-S 通过三级逐步特征蒸馏获得 $d_1, d_2, d_3$，再将最后变换特征 $r_4$ 与其拼接，经 $1 times 1$ 融合、ESA 和局部残差输出。(c) ESA 通过通道压缩、下采样空间编码和上采样生成像素级注意力。(d) GMod 使用全局平均池化与 MLP 预测逐通道增益和偏置。$L^3$-AgriUAVNet 使用两个块、48 通道、0.25 蒸馏比和标准卷积，共 0.139 M 参数。
   ],
-) <fig:backbone>
+) <fig:l3_network>
 
-夜间农业无人机影像的低光增强面临多重挑战：整体亮度不足、噪声显著放大、局部结构模糊，以及低照度和白平衡变化引起的 RGB 通道比例漂移。针对这些特点，本研究采用轻量化增强网络 $L^3$-AgriUAVNet（Lightweight Low-Light UAV-Based Agricultural Monitoring Network，如@fig:backbone 所示），在有限算力预算下恢复暗区可见度、保留幼苗边界与作物行纹理并校正通道比例漂移，为后续脱叶率与吐絮率识别提供更稳定的输入。
+==== 设计目标与总体流程
 
-设归一化低光输入为 $bold(I)_("rgb") in [0, 1]^(B times 3 times H times W)$，网络的整体前向过程可写为：
+$L^3$-AgriUAVNet 旨在恢复暗区可见度、保留幼苗边界与作物行纹理，并校正低照度和白平衡变化引起的 RGB 通道比例漂移。为适应边缘端参数预算，网络采用受限的主干深度和特征宽度。其整体数据流如@fig:l3_network (a) 所示。设归一化低光输入为 $bold(I)_("rgb") in [0, 1]^(B times 3 times H times W)$，前向过程可写为
 
-$ bold(Z) = cal(T)_("HVI")(bold(I)_("rgb")), quad bold(F)_0 = phi_h (bold(Z)), quad bold(F)_2 = cal(B)_2 (cal(B)_1 (bold(F)_0)) $
+$
+bold(Z) & = cal(T)_("HVI")(bold(I)_("rgb")), quad & bold(F)_0 & = phi_h (bold(Z)), \
+bold(F)_2 & = cal(B)_2 (cal(B)_1 (bold(F)_0)), quad & bold(F)_m & = cal(G)(bold(F)_2), \
+bold(R)_("hvi") & = phi_t ([bold(F)_0, bold(F)_m]), quad & hat(bold(I))_("rgb") & = op("clip")(cal(T)_("HVI")^(-1)(bold(Z) + bold(R)_("hvi")), 0, 1),
+$
 
-$ bold(F)_m = cal(G)(bold(F)_2), quad bold(R)_("hvi") = phi_t ([bold(F)_0, bold(F)_m]), quad hat(bold(I))_("rgb") = op("clip")(cal(T)_("HVI")^(-1)(bold(Z) + bold(R)_("hvi")), 0, 1) $
+其中，$cal(T)_("HVI")$ 和 $cal(T)_("HVI")^(-1)$ 分别表示 HVI 正变换与逆变换，$phi_h$ 和 $phi_t$ 表示头部与尾部映射，$cal(B)_i$ 表示 RFDN-S，$cal(G)$ 表示 Global Modulation（GMod）。网络设置两类跳跃连接：$bold(Z)$ 参与 HVI 空间残差重建，$bold(F)_0$ 在尾部与深层调制特征融合。
 
-其中 $cal(T)_("HVI")$ 与 $cal(T)_("HVI")^(-1)$ 分别表示 HVI 正变换与逆变换，$phi_h$ 与 $phi_t$ 表示头部与尾部映射，$cal(B)_i$ 表示浅层残差特征蒸馏块 RFDN-S，$cal(G)$ 表示全局仿射调制模块 GMod。网络设置两类跳跃连接：$bold(Z)$ 参与 HVI 空间残差重建，$bold(F)_0$ 在尾部与深层调制特征融合。
+==== 面向强度与色彩比例建模的 HVI 表征
 
-=== 面向强度与色彩比例建模的 HVI 表征
+网络首先将 RGB 转换为 Horizontal/Vertical-Intensity（HVI）表征@yan2025cidnet。对单个像素的归一化通道值 $R, G, B in [0, 1]$，定义强度 $I$、最小通道值 $m$ 和饱和度 $S$ 为
 
-网络首先将 RGB 转换为 HVI（Horizontal/Vertical-Intensity）表征@yan2025cidnet。对单个像素的归一化通道值 $R, G, B in [0, 1]$，定义强度 $I$、最小通道值 $m$ 和饱和度 $S$ 为：
+$ I = max(R, G, B), quad m = min(R, G, B), quad S = frac(I - m, I + epsilon), $
 
-$ I = max(R, G, B), quad m = min(R, G, B), quad S = frac(I - m, I + epsilon) $
-
-其中 $I = 0$ 时令 $S = 0$，$epsilon = 10^(-8)$ 用于数值稳定。记 $h in [0, 1)$ 为按 HSV 分段规则计算并归一化后的色相。HVI 使用强度相关的色彩敏感度：
+其中 $I = 0$ 时令 $S = 0$，$epsilon = 10^(-8)$ 用于数值稳定。记 $h in [0, 1)$ 为按 HSV 分段规则计算并归一化后的色相。HVI 使用强度相关的色彩敏感度
 
 $ C_k (I) = [sin(frac(pi I, 2)) + epsilon]^k $
 
-缩放色相–饱和度平面，并将三个输出通道定义为：
+缩放色相–饱和度平面，并将三个输出通道定义为
 
-$ H = C_k (I) S cos(2 pi h), quad V = C_k (I) S sin(2 pi h), quad I = max(R, G, B) $
+$ H = C_k (I) S cos(2 pi h), quad V = C_k (I) S sin(2 pi h), quad I = max(R, G, B). $
 
-指数 $k$ 为可学习参数，初始值为 0.2。强度相关缩放能够抑制暗区不稳定的色彩幅值，同时以二维方向保留相对色相，为植被、土壤及其边界处的通道比例校正提供结构化表征。相比在 RGB 空间中直接回归，在 HVI 空间中进行增强可减少色偏与亮度伪影；HVI 与 RGB 之间的往返映射完全可微，可直接嵌入网络前端与输出端。
+指数 $k$ 为可学习参数，初始值为 0.2。强度相关缩放能够抑制暗区不稳定的色彩幅值，同时以二维方向保留相对色相，为植被、土壤及其边界处的通道比例校正提供结构化表征。
 
 逆变换将 $H, V$ 裁剪至 $[-1, 1]$，将 $I$ 裁剪至 $[0, 1]$，并计算 $bar(H) = H / (C_k (I) + epsilon)$ 与 $bar(V) = V / (C_k (I) + epsilon)$。随后由 $h = op("atan2")(bar(V), bar(H)) / (2 pi) mod 1$ 和 $S = op("clip")(sqrt(bar(H)^2 + bar(V)^2 + epsilon), 0, 1)$ 恢复 HSV 参数，经标准 HSV–RGB 分段映射获得 RGB 输出。
 
-=== 浅层单流特征提取
+==== 浅层单流特征提取
 
-头部映射 $phi_h$ 采用保持空间尺寸的 $3 times 3$ 卷积，将 $bold(Z) in RR^(B times 3 times H times W)$ 投影为 $bold(F)_0 = phi_h (bold(Z)) in RR^(B times 48 times H times W)$。主干串联两个 RFDN-S，块内卷积通过填充维持 $H times W$ 分辨率，从而避免连续下采样对幼苗边界和细窄作物行的压缩。三个 HVI 通道在单条共享流中处理，使强度与色彩方向响应在每一层卷积中直接交互，这契合欠曝与通道比例偏移在空间上相互耦合的田间影像特性。由两个块和 48 个通道构成的浅层主干兼顾了当前数据规模与参数预算。
+头部映射 $phi_h$ 采用保持空间尺寸的 $3 times 3$ 卷积，将 $bold(Z) in RR^(B times 3 times H times W)$ 投影为
 
-=== RFDN-S 残差特征蒸馏块
+$ bold(F)_0 = phi_h (bold(Z)) in RR^(B times 48 times H times W). $
 
-主干中的浅层残差特征蒸馏块记为 RFDN-S，完整 RFDN 专指对比实验中的基线网络@liu2020residual。每个 RFDN-S 围绕两条非对称路径组织：低成本的蒸馏路径用于保留早期局部响应，收窄至 $C - d$ 通道的细化路径则继续积累邻域上下文。块内不逐级累加残差，而是在注意力加权后以一次块级局部残差维持浅层主干中的直接梯度通路。这些选择将 RFDN 的逐级特征蒸馏思想适配到浅层农业主干上，其与原始 RFDB 的结构差异汇总于@tab:arch_relation。网络层面，特征融合在各块内部完成，因此两个顺序连接的 RFDN-S 即可满足需求，无需多块输出拼接；由于表征始终保持全分辨率，也不需要上采样恢复头。对于输入 $bold(X) in RR^(B times C times H times W)$，本研究取 $C = 48$、蒸馏比 $rho = 0.25$，因此每级蒸馏通道数 $d = floor(rho C) = 12$，连续细化通道数 $r = C - d = 36$。
+主干串联两个 RFDN-S，块内卷积通过填充维持 $H times W$ 分辨率，从而避免连续下采样对幼苗边界和细窄作物行的压缩。三个 HVI 通道在单条共享流中处理，使强度与色彩方向响应在每一层卷积中直接交互，这契合欠曝与通道比例偏移在空间上相互耦合的田间影像特性。由两个块和 48 个通道构成的浅层主干兼顾了当前数据规模与参数预算，其结构变体将在结果部分进行定量比较。
 
-如@fig:backbone (b) 所示，前三个阶段各自包含蒸馏路径和细化路径。蒸馏路径用 $1 times 1$ 卷积提取 12 通道特征，细化路径用标准 $3 times 3$ 卷积和 LeakyReLU 生成 36 通道特征：
+==== RFDN-S 残差特征蒸馏块
 
-$ bold(D)_1 = phi_(1 times 1)^(d, 1)(bold(X)), quad bold(R)_1 = sigma(phi_(3 times 3)^(r, 1)(bold(X))) $
+主干中的浅层残差特征蒸馏块记为 RFDN-S，完整 RFDN 专指对比实验中的基线网络。每个 RFDN-S 围绕两条非对称路径组织：低成本的蒸馏路径用于保留早期局部响应，收窄至 $C - d$ 通道的细化路径则继续积累邻域上下文。块内不逐级累加残差，而是在注意力加权后以一次块级局部残差维持浅层主干中的直接梯度通路；空间加权则由下一小节所述的精简 ESA 完成。这些选择将 RFDN 的逐级特征蒸馏思想@liu2020residual 适配到浅层农业主干上，其与原始 RFDB 的结构差异汇总于@tab:l3_arch_relation。网络层面，特征融合在各块内部完成，因此两个顺序连接的 RFDN-S 即可满足需求，无需多块输出拼接；由于表征始终保持全分辨率，也不需要上采样恢复头。对于输入 $bold(X) in RR^(B times C times H times W)$，本章取 $C = 48$、蒸馏比 $rho = 0.25$，因此每级蒸馏通道数 $d = floor(rho C) = 12$，连续细化通道数 $r = C - d = 36$。
 
-$ bold(D)_i = phi_(1 times 1)^(d, i)(bold(R)_(i - 1)), quad bold(R)_i = sigma(phi_(3 times 3)^(r, i)(bold(R)_(i - 1))), quad i = 2, 3 $
+如@fig:l3_network (b) 所示，前三个阶段各自包含蒸馏路径和细化路径。蒸馏路径用 $1 times 1$ 卷积提取 12 通道特征，细化路径用标准 $3 times 3$ 卷积和 LeakyReLU 生成 36 通道特征：
+
+$
+bold(D)_1 & = phi_(1 times 1)^(d, 1)(bold(X)), quad & bold(R)_1 & = sigma(phi_(3 times 3)^(r, 1)(bold(X))), \
+bold(D)_i & = phi_(1 times 1)^(d, i)(bold(R)_(i - 1)), quad & bold(R)_i & = sigma(phi_(3 times 3)^(r, i)(bold(R)_(i - 1))), quad i = 2, 3,
+$
 
 其中 $sigma$ 为负斜率 0.1 的 LeakyReLU。第四阶段不再拆分通道，而是将 $bold(R)_3$ 映射为最后一组蒸馏宽度特征：
 
-$ bold(R)_4 = sigma(phi_(3 times 3)^(d, 4)(bold(R)_3)) $
+$ bold(R)_4 = sigma(phi_(3 times 3)^(d, 4)(bold(R)_3)). $
 
 随后在通道维拼接 $[bold(D)_1, bold(D)_2, bold(D)_3, bold(R)_4]$，得到 48 通道特征，并通过 $1 times 1$ 卷积完成融合：
 
-$ bold(F)_d = phi_(1 times 1)^f ([bold(D)_1, bold(D)_2, bold(D)_3, bold(R)_4]) $
+$ bold(F)_d = phi_(1 times 1)^f ([bold(D)_1, bold(D)_2, bold(D)_3, bold(R)_4]). $
 
 逐级导出的蒸馏特征为早期局部响应提供短路径，未被蒸馏的特征则继续经过卷积以积累邻域上下文。这种并行保留与连续细化有助于同时表达幼苗轮廓、作物行纹理及低纹理冠层。融合结果经 ESA 加权后与块输入执行局部残差相加：
 
-$ cal(B)(bold(X)) = bold(X) + cal(E)(bold(F)_d) $
+$ cal(B)(bold(X)) = bold(X) + cal(E)(bold(F)_d), $
 
 其中 $cal(E)$ 表示 ESA。局部残差连接保留块输入，并为两个连续 RFDN-S 提供直接的梯度传播路径。
 
-=== 精简高效空间注意力
+==== 高效空间注意力
 
-Enhanced Spatial Attention（ESA）位于每个 RFDN-S 的特征融合之后（@fig:backbone (c)）。注意力掩码仅由四种低开销操作计算——通道压缩、跨步空间编码、局部细化和双线性上采样，因此无需在原始分辨率下处理完整特征张量；相比 RFDN 所用的 ESA@liu2020residual，本研究省去了最大池化分支和一个卷积层（见@tab:arch_relation）。对输入 $bold(F)_d in RR^(B times 48 times H times W)$，ESA 先用 $1 times 1$ 卷积将通道压缩至 $C_("mid") = 12$，步长为 2 的 $3 times 3$ 卷积随后在降采样特征上编码空间上下文，另一个 $3 times 3$ 卷积进一步细化响应：
+Enhanced Spatial Attention（ESA）位于每个 RFDN-S 的特征融合之后（@fig:l3_network (c)）。注意力掩码仅由四种低开销操作计算——通道压缩、跨步空间编码、局部细化和双线性上采样，因此无需在原始分辨率下处理完整特征张量；相比 RFDN 所用的 ESA@liu2020residual，最大池化分支和一个卷积层被省去（@tab:l3_arch_relation）。对输入 $bold(F)_d in RR^(B times 48 times H times W)$，ESA 先用 $1 times 1$ 卷积将通道压缩至 $C_("mid") = 12$。步长为 2 的 $3 times 3$ 卷积随后在降采样特征上编码空间上下文，另一个 $3 times 3$ 卷积进一步细化响应：
 
-$ bold(F)_c = sigma(phi_(1 times 1)(bold(F)_d)), quad bold(F)_s = sigma(phi_(3 times 3)(sigma(phi_(3 times 3, s = 2)(bold(F)_c)))) $
+$
+bold(F)_c & = sigma(phi_(1 times 1)^(e 1)(bold(F)_d)), \
+bold(F)_s & = sigma(phi_(3 times 3)^(e 2)(sigma(phi_(3 times 3, s = 2)^(e 1)(bold(F)_c)))).
+$
 
 编码特征通过双线性插值恢复至 $H times W$，再由 $1 times 1$ 卷积恢复为 48 通道。sigmoid 函数生成逐通道、逐位置注意力掩码：
 
-$ bold(A) = op("sigmoid")(phi_(1 times 1)(op("Up")(bold(F)_s))), quad cal(E)(bold(F)_d) = bold(F)_d dot.o bold(A) $
+$ bold(A) = op("sigmoid")(phi_(1 times 1)^(e 3)(op("Up")(bold(F)_s))), quad cal(E)(bold(F)_d) = bold(F)_d dot.o bold(A). $
 
 ESA 在压缩通道和降采样空间上估计注意力，降低了直接处理完整特征张量的空间开销。所得掩码在保持特征分辨率的同时，自适应调节幼苗边缘、作物行纹理和土壤细节等局部响应。
 
-=== 全局仿射调制
+==== 全局仿射调制
 
-两个 RFDN-S 主要在有限邻域内提取和筛选局部结构，而整幅无人机图像还可能受到统一欠曝或通道增益偏移的影响。Global Modulation（GMod）因此在第二个块之后执行样本级通道调节（@fig:backbone (d)）。对 $bold(F)_2 in RR^(B times 48 times H times W)$，自适应全局平均池化得到 $bold(z) in RR^(B times 48)$，两层 MLP 按 $48 arrow.r 64 arrow.r 96$ 映射通道描述子：
+两个 RFDN-S 主要在有限邻域内提取和筛选局部结构，而整幅无人机图像还可能受到统一欠曝或通道增益偏移的影响。Global Modulation（GMod）因此在第二个块之后执行样本级通道调节（@fig:l3_network (d)）。对 $bold(F)_2 in RR^(B times 48 times H times W)$，自适应全局平均池化得到 $bold(z) in RR^(B times 48)$，两层 MLP 按 $48 arrow.r 64 arrow.r 96$ 映射通道描述子：
 
-$ bold(z) = op("GAP")(bold(F)_2), quad [Delta bold(g), bold(b)] = op("MLP")(bold(z)) $
+$ bold(z) = op("GAP")(bold(F)_2), quad [Delta bold(g), bold(b)] = op("MLP")(bold(z)). $
 
 MLP 中间层使用负斜率 0.1 的 LeakyReLU。其 96 维输出均分为增益残差 $Delta bold(g)$ 和偏置 $bold(b)$，二者重塑为 $B times 48 times 1 times 1$ 后广播至所有空间位置：
 
-$ bold(F)_m = bold(F)_2 dot.o (bold(1) + Delta bold(g)) + bold(b) $
+$ bold(F)_m = bold(F)_2 dot.o (bold(1) + Delta bold(g)) + bold(b). $
 
 最后一个线性层的权重和偏置均初始化为 0，因而训练开始时 $Delta bold(g) = bold(0)$、$bold(b) = bold(0)$，GMod 接近恒等映射。随着训练进行，GMod 学习针对每幅输入的通道级增益与偏置，用于补充 RFDN-S 和 ESA 的局部结构建模，校正全局曝光与色彩比例变化。
 
-从操作形式看，GMod 与 Squeeze-and-Excitation（SE）通道重标定@hu2018senet 和 Feature-wise Linear Modulation（FiLM）@perez2018film 均相关，但三者作用方式不同。SE 通常由全局描述子生成 sigmoid 通道权重，只执行乘性重标定；FiLM 使用条件信息生成特征级尺度与偏置，条件通常来自另一输入或网络分支。本研究的 GMod 直接以当前增强特征的 GAP 描述子作为自条件，同时预测增益残差和加性偏置，仅在第二个 RFDN-S 后执行一次，并通过零初始化保持训练初期的恒等映射。这一配置以较低开销为浅层增强主干提供了全局曝光和通道比例调节能力。
+从操作形式看，GMod 与 Squeeze-and-Excitation（SE）通道重标定@hu2018senet 和 Feature-wise Linear Modulation（FiLM）@perez2018film 均相关，但三者作用方式不同。SE 通常由全局描述子生成 sigmoid 通道权重，只执行乘性重标定；FiLM 使用条件信息生成特征级尺度与偏置，条件通常来自另一输入或网络分支。本章 GMod 直接以当前增强特征的 GAP 描述子作为自条件，同时预测增益残差和加性偏置，仅在第二个 RFDN-S 后执行一次，并通过零初始化保持训练初期的恒等映射。这一配置以较低开销为浅层增强主干提供了全局曝光和通道比例调节能力。
 
-=== HVI 空间残差重建与模型配置
+==== HVI 空间残差重建与模型配置
 
 尾部将浅层特征 $bold(F)_0$ 与调制特征 $bold(F)_m$ 在通道维拼接，形成 $B times 96 times H times W$ 的融合输入。$phi_t$ 依次使用 $1 times 1$ 卷积将通道数由 96 降至 48、LeakyReLU、$3 times 3$ 卷积、LeakyReLU 和最终的 $3 times 3$ 卷积，预测三通道 HVI 空间残差：
 
-$ bold(R)_("hvi") = phi_t ([bold(F)_0, bold(F)_m]), quad hat(bold(Z)) = bold(Z) + bold(R)_("hvi") $
+$ bold(R)_("hvi") = phi_t ([bold(F)_0, bold(F)_m]), quad hat(bold(Z)) = bold(Z) + bold(R)_("hvi"). $
 
 原始 HVI 表征到 $hat(bold(Z))$ 的长残差连接将学习目标限定为从低光输入到参考曝光的增量校正；$bold(F)_0$ 到尾部的浅层跳跃连接则重新引入未经连续块变换的高分辨率局部特征。增强后的 HVI 表征经 $cal(T)_("HVI")^(-1)$ 转回 RGB，并裁剪到 $[0, 1]$ 作为最终输出。
 
-本研究将标准卷积配置统一记为 $L^3$-AgriUAVNet：深度 $D = 2$、宽度 $C = 48$、蒸馏比为 0.25，启用 ESA 和 GMod，参数量约为 0.139 M。其 DWConv 变体统一记为 $L^3$-AgriUAVNet-DW，使用相同的深度、宽度和模块配置，但以深度可分离卷积替换 RFDN-S 细化路径中的标准卷积，参数量约为 0.07 M，供算力极端受限的平台选用。两种卷积配置的定量比较在消融实验中单独报告。
+本章将标准卷积配置统一记为 $L^3$-AgriUAVNet：深度 $D = 2$、宽度 $C = 48$、蒸馏比为 0.25，启用 ESA 和 GMod，参数量约为 0.139 M。其 DWConv 变体统一记为 $L^3$-AgriUAVNet-DW，使用相同的深度、宽度和模块配置，但以深度可分离卷积替换 RFDN-S 细化路径中的标准卷积，参数量约为 0.07 M。两种卷积配置的定量比较在结果部分单独报告。
 
-=== 与邻近架构的关系
+==== 与邻近架构的关系
 
-@tab:arch_relation 从表征路径、局部主干和全局调节三个维度比较 $L^3$-AgriUAVNet 与其直接技术来源及邻近轻量模型。HVI-CIDNet 提供 HVI 表征，但采用强度–色彩双分支和跨注意力交互；标准 RFDN/RFDB 提供逐级特征蒸馏与 ESA，并在 RGB 特征上使用较宽的连续细化路径、多块输出融合和恢复头；SCI 则代表极轻量的照明估计路线。$L^3$-AgriUAVNet 将 HVI 表征与特征蒸馏重组为单流路径，以两个浅层块和一次自条件全局调制完成特征提取，并通过 HVI 空间残差重建输出增强结果。这种组织方式构成了面向农业 UAV 参数预算的集成创新。
+@tab:l3_arch_relation 从表征路径、局部主干和全局调节三个维度比较 $L^3$-AgriUAVNet 与其直接技术来源及邻近轻量模型。HVI-CIDNet 提供 HVI 表征，但采用强度–色彩双分支和跨注意力交互；标准 RFDN/RFDB 提供逐级特征蒸馏与 ESA，并在 RGB 特征上使用较宽的连续细化路径、多块输出融合和恢复头；SCI 则代表极轻量的照明估计路线。$L^3$-AgriUAVNet 将 HVI 表征与特征蒸馏重组为单流路径，以两个浅层块和一次自条件全局调制完成特征提取，并通过 HVI 空间残差重建输出增强结果。这种组织方式构成了面向农业 UAV 参数预算的集成创新。
 
 #figure(
   three-line-table(table(
@@ -127,97 +285,121 @@ $ bold(R)_("hvi") = phi_t ([bold(F)_0, bold(F)_m]), quad hat(bold(Z)) = bold(Z) 
     $L^3$-AgriUAVNet 与最邻近架构的结构关系。比较旨在区分既有组件来源与本章的任务导向配置。
   ],
   kind: table,
-) <tab:arch_relation>
+) <tab:l3_arch_relation>
 
-=== 损失函数设计
+=== 损失函数
 
-为缓解低光增强中“变亮但发糊偏色”的问题，本研究采用由鲁棒重建、结构梯度与颜色比例一致性组成的加权损失：
+网络采用端到端训练，复合低光恢复损失 LLLoss 同时约束像素重建、梯度一致性和色彩比例稳定性：
 
-$ "LLLoss" = w_("char") L_("char") + w_("grad") L_("grad") + w_("color") L_("color") $
+$ cal(L)_("LL") = w_("char") cal(L)_("char") + w_("grad") cal(L)_("grad") + w_("color") cal(L)_("color"), $
 
-本研究取 $w_("char") = 1.0$、$w_("grad") = 0.2$、$w_("color") = 0.05$，Charbonnier 损失@charbonnier1994two 中 $epsilon = 10^(-6)$。
+其中，经验权重设置为 $w_("char") = 1.0$、$w_("grad") = 0.2$ 和 $w_("color") = 0.05$。
 
-*Charbonnier（鲁棒像素重建）*
+Charbonnier 损失@charbonnier1994two 提供鲁棒像素重建项，对小误差近似 L2、对大误差近似 L1，相比纯 L2 对异常值更不敏感：
 
-$ L_("char") = frac(1, |Omega|) sum_(p in Omega) sqrt((y_p - t_p)^2 + epsilon^2) $
+$ cal(L)_("char") = sqrt((hat(bold(y)) - bold(y))^2 + epsilon^2), quad epsilon = 10^(-6), $
 
-与 $L_1$ 相比，Charbonnier 对小误差近似 $L_2$、对大误差近似 $L_1$，对噪声与局部异常更鲁棒且梯度更平滑，可提升低光数据上的训练稳定性。
+其中 $hat(bold(y))$ 和 $bold(y)$ 分别为预测的正常曝光图像和目标图像。
 
-*Gradient loss（梯度一致性 / 结构细节）*
+梯度损失通过比较预测图像与目标图像的 Sobel 水平和垂直梯度来强化结构一致性：
 
-$ L_("grad") = frac(1, |Omega|) sum_(p in Omega) (‖ ∇_x y_p - ∇_x t_p ‖_1 + ‖ ∇_y y_p - ∇_y t_p ‖_1) $
+$ cal(L)_("grad") = norm(nabla hat(bold(y)) - nabla bold(y))_1, $
 
-其中 $∇_x, ∇_y$ 为 Sobel 算子在水平方向与垂直方向的梯度响应，对每个 RGB 通道分别计算。该项鼓励边缘与纹理的梯度形状一致，从而减少“变亮但发糊”。
+其中，$nabla$ 表示 Sobel 梯度算子。该项强化预测结果与目标图像在叶片边缘和作物行结构上的一致性。
 
-*Color consistency（颜色比例一致性 / 抗偏色）*
+色彩一致性损失通过最小化预测图像与目标图像归一化平均颜色向量之间的 L1 距离来鼓励稳定的通道间比例：
 
-先计算每张图像的通道均值向量 $m(y) in RR^3$，再归一化得到通道占比向量 $r(y)$，并采用 $L_1$ 距离约束：
+$ cal(L)_("color") = norm(frac(bar(bold(c))(hat(bold(y))), sum_d bar(bold(c))_d (hat(bold(y)))) - frac(bar(bold(c))(bold(y)), sum_d bar(bold(c))_d (bold(y))))_1, $
 
-$ r(y) = frac(m(y), sum_(c) m_c(y) + delta) $
-
-$ L_("color") = frac(1, B) sum_(i=1)^B ‖ r(y_i) - r(t_i) ‖_1 $
-
-通过比较前先归一化平均向量，损失关注相对色彩比例而非绝对亮度，从而减少全局色彩偏移。
-
-== 增强模块实验验证
+其中 $bar(bold(c))(dot.op) in RR^3$ 为平均 RGB 向量，$d$ 索引三个通道。通过比较前先归一化平均向量，损失关注相对色彩比例而非绝对亮度，从而减少全局色彩偏移。
 
 === 实验设置
 
-上游低光增强实验在配备 NVIDIA GeForce RTX 4090（24 GB 显存）的工作站上完成，下游检测实验运行于配备 NVIDIA GeForce RTX 5090 的 AutoDL 云服务器，软件环境为 Ubuntu 22.04、Python 3.12、PyTorch 2.8.0 和 CUDA 12.8。所有模型使用相同的成对数据与训练、验证和测试索引，输入输出均为归一化至 $[0, 1]$ 的 RGB 图像，训练图像块尺寸为 $224 times 224$，随机种子固定为 42。
+上游低光增强实验在配备 NVIDIA GeForce RTX 4090（24 GB 显存；NVIDIA Corp., Santa Clara, CA, USA）的工作站上完成，下游检测实验运行于配备 NVIDIA GeForce RTX 5090 的 AutoDL 云服务器。软件环境为 Ubuntu 22.04、Python 3.12、PyTorch 2.8.0 和 CUDA 12.8。所有模型使用相同的配对数据与训练、验证和测试索引，输入和输出均为归一化至 $[0, 1]$ 的 RGB 图像；随机种子固定为 42。
 
-上游模型使用 Adam 优化器@kingma2014adam，恒定学习率 $10^(-4)$，$beta_1 = 0.9$，$beta_2 = 0.999$，$epsilon = 10^(-8)$，不使用权重衰减。batch size 按各模型显存需求选取：Restormer 为 4，LLFormer、Retinexformer、Uformer 与 $L^3$-AgriUAVNet 为 16，HVI-CIDNet 为 32，RFDN 与 SCI 为 64。最大 epoch 设置为 HVI-CIDNet 与 RFDN 各 10 个、其余模型 200 个；所有模型每 0.2 个 epoch 进行一次验证，并以 3 次验证检查为早停耐心选取验证损失最小的检查点，早停均在两个完整 epoch 之前触发，因此最大 epoch 设置未构成实际约束。固定测试集包含 3265 个图像块；真实场景评价采用 308 个真实低光玉米苗图像块，与第 5 章用于退化参数标定的 26 张棉花低光影像相互独立。低光成对数据的构建流程与统计对齐验证见第 5 章，本章不再赘述。
+上游模型在 $224 times 224$ 配对图像块上训练，使用 Adam 优化器@kingma2014adam，恒定学习率 $10^(-4)$，$beta_1 = 0.9$，$beta_2 = 0.999$，$epsilon = 10^(-8)$，不使用权重衰减。批量大小按模型显存需求选取：Restormer 为 4；LLFormer、Retinexformer、Uformer 和 $L^3$-AgriUAVNet 为 16；HVI-CIDNet 为 32；RFDN 和 SCI 为 64。最大 epoch 设置为 HVI-CIDNet 和 RFDN 各 10 个、其余模型 200 个。所有模型每 0.2 个 epoch 进行一次验证，并以 3 次验证检查为早停耐心选取验证损失最小的检查点；早停均在两个完整 epoch 之前触发，因此最大 epoch 设置未构成实际约束。
 
-下游玉米苗检测采用 Ultralytics 8.4.82 实现的 YOLOv8n 和 YOLOv8s@jocher2023yolov8，分别作为轻量和均衡检测器的代表。图像缩放至 $512 times 512$，每个 LabelMe 点标注表示一株玉米苗的中心；训练前，每个点被转换为以该点为中心的固定正方形边界框，归一化宽度和高度均为 0.04（在 $512 times 512$ 分辨率下约为 $20.5 times 20.5$ 像素），与图像边界相交的框裁剪至有效图像范围。Raw 与各增强方法对应的输入分布使用相同的转换后标注。每个检测器训练 75 个 epoch，早停耐心为 20；YOLOv8n 批量大小 256，YOLOv8s 批量大小 128。所有送入检测器的输入遵循相同训练流程，以减少检测器训练协议差异造成的混杂。
+下游检测采用 Ultralytics 8.4.82 实现的 YOLOv8n 和 YOLOv8s@jocher2023yolov8，分别作为轻量和均衡检测器的代表。图像缩放至 $512 times 512$，每个 LabelMe 点标注表示一株玉米苗的中心。YOLO 训练前，每个点被转换为以该点为中心的固定正方形边界框，归一化宽度和高度均为 0.04（在 $512 times 512$ 分辨率下约为 $20.5 times 20.5$ 像素）；与图像边界相交的框裁剪至有效图像范围。Raw 与各增强方法对应的输入分布使用相同的转换后标注。每个检测器训练 75 个 epoch，早停耐心为 20；YOLOv8n 批量大小 256，YOLOv8s 批量大小 128。所有送入检测器的输入遵循相同训练 schedule，以减少检测器训练协议差异造成的混杂并提高方法间比较的一致性。
 
-增强质量采用 PSNR、SSIM@wang2004ssim、MAE 与 LPIPS@zhang2018unreasonable 四项标准指标评价，每项指标先在每个测试图像块上独立计算，再在固定测试集上取算术均值。真实低光图像缺少严格配对的正常曝光参考，因此采用无参考自然度、曝光与通道关系以及结构响应三类互补指标：NIQE@mittal2013niqe 与 BRISQUE@mittal2012brisque 得分越低表示图像统计越接近高质量自然图像先验；欠曝像素比例定义为亮度低于 $10 \/ 255$ 的像素占比；RGB 通道均衡偏差刻画三通道全局均值的相对偏置；结构响应由 Tenengrad（$3 times 3$ Sobel 梯度幅值的像素均值）、边缘密度（Canny 算法@canny1986edge 在低、高阈值 50 和 150 下的边缘像素比例）和局部对比度（$7 times 7$ 邻域灰度标准差的像素均值）描述，三者用于描述结构变化，不设单调的最优方向。模型复杂度由总参数量和推理计算量共同表征，计算量通过 THOP 在 evaluation mode、batch size 为 1、输入尺寸 $1 times 3 times 224 times 224$ 的统一条件下统计，并以 GMACs 报告。方法间差异使用同一测试图像块上的配对统计进行分析，报告以图像块为单位的 paired-bootstrap 置信区间和 Holm 校正 $p$ 值；文中报告的方法间差异均由未四舍五入的指标值计算，表中数值为显示用四舍五入结果。
+=== 评价指标
 
-=== 综合性能分析
+低光增强质量采用四项标准指标评价。PSNR 和 SSIM@wang2004ssim 分别度量像素保真度与结构相似度，MAE 反映平均像素误差，LPIPS@zhang2018unreasonable 衡量感知距离。每项指标先在每个测试图像块上独立计算，再在固定测试集上取算术均值。
+
+真实低光图像缺少严格配对的正常曝光参考，因此采用无参考自然度、曝光与通道关系以及结构响应三类互补指标。输入 RGB 图像归一化至 $[0, 1]$，并按 Rec. 601 系数转换为灰度亮度：
+
+$ Y(p) = 0.299 R(p) + 0.587 G(p) + 0.114 B(p). $
+
+NIQE@mittal2013niqe 按官方 MATLAB/BasicSR 实现的自然场景统计流程计算，使用预训练高质量图像多元高斯参数、$96 times 96$ 图像块和两个尺度；BRISQUE@mittal2012brisque 使用 pybrisque 1.0 的 36 维空间统计特征及其预训练支持向量回归模型。两者得分越低，表示图像统计越接近其各自模型中的高质量自然图像先验。
+
+欠曝像素比例定义为亮度低于 $10 \/ 255$ 的像素占比：
+
+$ U = frac(1, |Omega|) sum_(p in Omega) op("I")[Y(p) < frac(10, 255)]. $
+
+设 $mu_R, mu_G, mu_B$ 为单幅图像的 RGB 通道均值，$bar(mu) = (mu_R + mu_G + mu_B) / 3$，RGB 通道均衡偏差定义为
+
+$ D_("RGB") = frac(|mu_R - bar(mu)| + |mu_G - bar(mu)| + |mu_B - bar(mu)|, 3 bar(mu)). $
+
+$D_("RGB")$ 越低表示三个通道的全局均值越均衡；该指标刻画相对通道偏置，不等同于相对于正常曝光参考的色差。
+
+结构响应由 Tenengrad、边缘密度和局部对比度描述。Tenengrad 为 $3 times 3$ Sobel 水平与垂直梯度幅值的像素均值；边缘密度为 Canny 算法@canny1986edge 在低、高阈值分别为 50 和 150 时得到的边缘像素比例；局部对比度为 $7 times 7$ 邻域灰度标准差的像素均值。增强、锐化和噪声均可能提高这些响应，因此三者用于描述结构变化，不设单调的最优方向。上述指标先在每个图像块上独立计算，再对 308 个图像块取算术均值；Raw 与各增强结果按文件名一一对应。
+
+模型复杂度由总参数量和推理计算量共同表征；计算量通过 THOP 在 evaluation mode、batch size 为 1、输入尺寸为 $1 times 3 times 224 times 224$ 的统一条件下统计，并以 GMACs 报告。
+
+模型间差异使用同一测试图像块上的配对统计进行分析。文中报告以图像块为单位的 paired-bootstrap 置信区间和 Holm 校正 $p$ 值，用于量化固定域内评价协议下方法间差异的方向、幅度和稳定性。
+
+下游玉米苗检测对两种检测器配置均报告 mAP\@0.5、Precision 和 Recall；YOLOv8n 另报告 COCO 风格的 mAP\@0.5:0.95。
+
+文中报告的方法间差异均由未四舍五入的指标值计算；表中数值为显示用四舍五入结果。
+
+== 实验与结果
+
+实验从合成配对恢复质量、模型效率、组件消融、真实低光表现和下游任务响应五个方面评价 $L^3$-AgriUAVNet。
+
+=== 整体性能对比
 
 #figure(
   three-line-table(table(
     columns: 7,
-    table.header([方法], [参数量(M)], [MACs(G)], [PSNR(dB)↑], [SSIM↑], [MAE↓], [LPIPS↓]),
-    [LLFormer], [5.807], [15.507], [26.54], [0.888], [0.0441], [0.103],
-    [Restormer], [25.872], [71.820], [26.16], [0.866], [0.0452], [0.105],
-    [Retinexformer], [2.028], [15.747], [26.10], [0.891], [0.0450], [0.125],
-    [Uformer], [6.192], [18.475], [24.66], [0.817], [0.0522], [0.222],
-    [HVI-CIDNet], [1.976], [6.227], [24.30], [0.795], [0.0533], [0.252],
-    [RFDN], [0.371], [17.593], [22.53], [0.800], [0.0649], [0.360],
-    [SCI], [0.022], [1.493], [21.86], [0.773], [0.0731], [0.289],
-    [$L^3$-AgriUAVNet], [0.139], [6.252], [26.24], [0.893], [0.0452], [0.119],
+    table.header([方法], [参数量(M)↓], [MACs(G)↓], [PSNR(dB)↑], [SSIM↑], [MAE↓], [LPIPS↓]),
+    [LLFormer@wang2023llformer], [5.807], [15.507], [*26.54*], [0.888], [*0.0441*], [*0.103*],
+    [Restormer@zamir2022restormer], [25.872], [71.820], [26.16], [0.866], [0.0452], [0.105],
+    [Retinexformer@cai2023retinexformer], [2.028], [15.747], [26.10], [0.891], [0.0450], [0.125],
+    [Uformer@wang2022uformer], [6.192], [18.475], [24.66], [0.817], [0.0522], [0.222],
+    [HVI-CIDNet@yan2025cidnet], [1.976], [6.227], [24.30], [0.795], [0.0533], [0.252],
+    [RFDN@liu2020residual], [0.371], [17.593], [22.53], [0.800], [0.0649], [0.360],
+    [SCI@ma2022sci], [*0.022*], [*1.493*], [21.86], [0.773], [0.0731], [0.289],
+    [*$L^3$-AgriUAVNet*], [0.139], [6.252], [26.24], [*0.893*], [0.0452], [0.119],
   )),
   caption: [
-    不同低光图像增强方法在夜间 UAV 场景下的定量性能对比。表中比较了各方法的模型参数量、乘加运算量（MACs）以及客观图像质量指标，包括 PSNR、SSIM、MAE 和 LPIPS。其中，PSNR 和 SSIM 越大越好，MAE 和 LPIPS 越小越好。
+    合成配对测试集上的增强质量与模型复杂度。质量指标为固定划分的 3265 个测试图像块上逐块测量的算术均值，PSNR/SSIM 越高、MAE/LPIPS 越低越好。$L^3$-AgriUAVNet 指标准卷积配置；参数量为模型总参数量，MACs 使用 THOP 在 evaluation mode、batch size 为 1、$1 times 3 times 224 times 224$ 输入下统计。各数值列最优值以粗体标出，设备端延迟见@tab:l3_ipad。
   ],
   kind: table,
-) <tab:overall>
+) <tab:l3_overall>
 
-为全面评估所提出方法的性能，本研究将对比基线由“轻量方法之间”的比较升级为覆盖重型 Transformer 与轻量方法的“跨复杂度全谱系”比较。其中，LLFormer@wang2023llformer、Restormer@zamir2022restormer、Retinexformer@cai2023retinexformer 与 Uformer@wang2022uformer 为具有代表性的 Transformer 图像重建方法；HVI-CIDNet@yan2025cidnet 为基于 HVI 色彩空间的低光增强网络；RFDN@liu2020residual 为轻量残差特征蒸馏网络；SCI@ma2022sci 为基于自标定光照（Self-Calibrated Illumination）的轻量增强方法。
+对比方法覆盖不同结构与复杂度层级，包括超高清低光 Transformer LLFormer@wang2023llformer、通用图像复原模型 Restormer@zamir2022restormer、单阶段 Retinex Transformer Retinexformer@cai2023retinexformer、U 形图像复原 Transformer Uformer@wang2022uformer、采用 HVI 与跨注意力的 HVI-CIDNet@yan2025cidnet，以及基于残差特征蒸馏和自校准照明的轻量模型 RFDN@liu2020residual 与 SCI@ma2022sci。该组合能够同时考察恢复质量与边缘部署效率。
 
-从@tab:overall 可见，$L^3$-AgriUAVNet 的 SSIM 为 0.893，为全表最优；PSNR 为 26.24 dB，较 Restormer 高 0.09 dB，距 LLFormer 仅 0.30 dB，总体处于重型 Transformer 同档水平。与此同时，其参数量仅为 0.139 M，为 LLFormer 的 1/42、Retinexformer 的 1/15、RFDN 的 1/2.7；MACs 为 6.252 G，约为 LLFormer、Retinexformer 与 RFDN 的 40%、40% 与 36%。统一条件下，模型的 ONNX 文件大小为 0.79 MiB，明显小于 LLFormer（22.62 MiB）、Retinexformer（8.30 MiB）与 RFDN（1.45 MiB）。这表明该方法在远小于主流基线的计算预算下，取得了与重型 Transformer 相当的重建精度。
+@tab:l3_overall 显示，$L^3$-AgriUAVNet 以 0.139 M 参数取得 26.24 dB PSNR 和 0.893 SSIM，其中 SSIM 为所有方法最高。其 PSNR 比 Restormer 高 0.09 dB，距 LLFormer 仅 0.30 dB。统一 profiling 下，模型计算量为 6.252G MACs，ONNX 文件大小为 0.79 MiB；相比之下，LLFormer、Retinexformer 和 RFDN 的模型大小分别为 22.62、8.30 和 1.45 MiB。
 
-逐图像块配对统计进一步支持这一结果。相对 Restormer，$L^3$-AgriUAVNet 的 PSNR 平均提高 0.0878 dB（95% paired bootstrap CI $[0.0470, 0.1301]$，Holm 校正 $p = 0.0105$），SSIM 提高 0.0271（$p < 0.001$）；与 LLFormer 相比，其 PSNR 低 0.2977 dB、SSIM 高 0.00555，而 MAE 和 LPIPS 更偏向 LLFormer。由此可见，$L^3$-AgriUAVNet 的优势并非单一指标最大化，而是在显著压缩模型规模的同时维持有竞争力的像素保真度并获得最高结构相似性。
+$L^3$-AgriUAVNet 的参数量约为 LLFormer 的 1/42、Retinexformer 的 1/15 和 RFDN 的 1/2.7，MACs 则分别约为 LLFormer、Retinexformer 和 RFDN 的 40%、40% 和 36%。结合设备端延迟测试，该模型在保持较高结构质量的同时显著降低了存储与计算开销。
 
-进一步从指标含义看，PSNR 和 SSIM 更多反映像素重建精度与整体结构相似性，而 LPIPS 更关注深层感知空间中的语义和纹理一致性。对于农业 UAV 低光增强任务而言，仅依赖 PSNR 提升并不足以保证下游识别收益，因为如果模型通过过度平滑换取更高像素一致性，叶缘、铃壳裂缝、棉絮边界和行间纹理等与表型判别直接相关的局部证据反而可能被削弱。$L^3$-AgriUAVNet 在 SSIM 最优的同时将 LPIPS 控制在 0.119，与最优方法（LLFormer 0.103、Restormer 0.105）处于同一水平，表明该网络更倾向于保留对下游语义判别有价值的结构性细节，而不是简单地执行亮度拉伸或纹理均值化处理。这一点与后续下游玉米苗检测实验中 mAP 的提升结果相互印证。
+逐图像块配对统计进一步支持这一结果。相对 Restormer，$L^3$-AgriUAVNet 的 PSNR 平均提高 0.0878 dB（95% paired bootstrap CI $[0.0470, 0.1301]$，Holm 校正 $p = 0.0105$），SSIM 提高 0.0271（$p < 0.001$）。与 LLFormer 相比，其 PSNR 低 0.2977 dB、SSIM 高 0.00555，而 MAE 和 LPIPS 更偏向 LLFormer。由此可见，$L^3$-AgriUAVNet 的优势并非单一指标最大化，而是在显著压缩模型规模的同时维持有竞争力的像素保真度并获得最高结构相似性。
 
-从工程部署角度看，@tab:overall 反映的是增强质量、模型复杂度与端侧可用性之间的综合权衡。夜间无人机在线作业要求增强模块不能显著挤占后续脱叶率与吐絮率识别及空间聚合的推理预算，因此本研究更关注模型在整体链路中的可部署性。综合来看，$L^3$-AgriUAVNet 在定量重建、感知一致性和模型规模之间具有较好的平衡。
-
-=== 运行消耗
+=== 运行效率分析
 
 #figure(
   image("fig4_quality_efficiency.png", width: 90%),
   caption: [
-    合成配对测试集上的质量–参数量权衡。参数量采用对数坐标，以区分大型 Transformer 与轻量模型。$L^3$-AgriUAVNet 位于高 SSIM 与低参数量的质量–参数量前沿，但 LLFormer 仍具有更高 PSNR。
+    合成配对测试集上的质量–参数量权衡。参数量采用对数坐标，以区分大型 Transformer 与轻量模型。$L^3$-AgriUAVNet 位于高 SSIM 与低参数量的质量–参数量前沿，但 LLFormer 仍具有更高 PSNR。计算量和设备端延迟分别见@tab:l3_overall 和@tab:l3_ipad。
   ],
-) <fig:time>
+) <fig:l3_quality_efficiency>
 
-如@fig:time 所示，$L^3$-AgriUAVNet 的优势集中在高 SSIM、低参数量和较低 MACs 的组合上。RFDN 的参数量和 MACs 分别约为 $L^3$-AgriUAVNet 的 2.7 和 2.8 倍；HVI-CIDNet 的参数量约为其 14.2 倍，而两者 MACs 接近。这些结果说明参数量与计算量是互补的效率维度，也凸显了 $L^3$-AgriUAVNet 在两项指标上的均衡配置。
+@fig:l3_quality_efficiency 展示了质量与参数规模的关系；结合@tab:l3_overall，$L^3$-AgriUAVNet 的优势集中在高 SSIM、低参数量和较低 MACs 的组合上。RFDN 的参数量和 MACs 分别约为 $L^3$-AgriUAVNet 的 2.7 和 2.8 倍；HVI-CIDNet 的参数量约为其 14.2 倍，而两者 MACs 接近。这些结果说明参数量与计算量是互补的效率维度，也凸显了 $L^3$-AgriUAVNet 在两项指标上的均衡配置。
 
 #figure(
   three-line-table(table(
     columns: 3,
     table.header([方法], [平均推理时间 (ms/image)↓], [约当 FPS↑]),
-    [$L^3$-AgriUAVNet], [202], [4.95],
+    [$L^3$-AgriUAVNet], [*202*], [*4.95*],
     [LLFormer], [569], [1.76],
     [RFDN], [1281], [0.78],
     [Retinexformer], [2712], [0.37],
@@ -226,30 +408,28 @@ $ L_("color") = frac(1, B) sum_(i=1)^B ‖ r(y_i) - r(t_i) ‖_1 $
     iPad Air（第 3 代）上的软件端模型推理效率。所有方法均使用 ONNX Runtime Web 1.23.2、WebGPU execution provider，启用图优化，输入为随机 float32 $1 times 3 times 224 times 224$，batch size 为 1；5 次 warm-up 后计时 10 次并取平均。计时不含会话创建、模型加载、预处理和后处理。
   ],
   kind: table,
-) <tab:ipad>
+) <tab:l3_ipad>
 
-面向真实端侧环境，本研究进一步将各方法导出为 ONNX 模型并在平板设备上实测软件端推理效率。如@tab:ipad 所示，在 iPad Air（第 3 代）上（ONNX Runtime Web 1.23.2 + WebGPU，$224 times 224$ 输入），$L^3$-AgriUAVNet 单张推理耗时 202 ms（约当 4.95 FPS），较 LLFormer（569 ms / 1.76 FPS）、RFDN（1281 ms / 0.78 FPS）与 Retinexformer（2712 ms / 0.37 FPS）分别快约 2.8 倍、6.3 倍与 13.4 倍。该结果验证了模型在无独立 GPU 的消费级平板设备上的软件端推理效率，为进一步集成到农业 UAV 边缘视觉管线提供了设备侧依据。
+在@tab:l3_ipad 的固定协议下，$L^3$-AgriUAVNet 相对 LLFormer、RFDN 和 Retinexformer 分别约快 2.8、6.3 和 13.4 倍。该结果直接验证了模型在 iPad Air（第 3 代；Apple Inc., Cupertino, CA, USA）、$224 times 224$ 输入和 ONNX Runtime Web WebGPU 后端上的软件端推理效率，为进一步集成到农业 UAV 边缘视觉管线提供了设备侧依据。
 
-需要指出的是，低光增强模块的运行消耗不能孤立理解，而应放在“增强 + 识别 + 地理映射”的整链路预算中评估。在实际作业中，若增强模块占用过多推理时间，将直接压缩后续双指标识别、空间聚合与处方更新的时间窗口。基于这一约束，$L^3$-AgriUAVNet 将主要计算资源集中在亮度恢复、纹理保留和颜色稳定上，从而更适配端侧部署需求。
-
-此外，“参数量较小但感知质量较优”还意味着模型结构具有较好的可压缩性与平台迁移潜力。对于无人机遥控器、嵌入式边缘盒子或轻量 GPU 平台而言，模型规模不仅影响显存占用，还会影响加载时延、缓存命中率以及长时间运行下的热稳定性。因此，小参数量并非单纯的存储优势，而是与低功耗和系统可靠性直接相关。综合质量与效率分布可以看出，本研究方法更适合作为全天候识别链路中的前端模块，而非仅作为离线图像修复工具。
-
-=== 消融实验
+=== 架构设计依据
 
 #figure(
   image("fig5_ablation_design.png", width: 100%),
   caption: [
     组件与配置消融的 PSNR 差异。横向条形图给出各变体相对 $L^3$-AgriUAVNet 的 PSNR 变化，颜色区分组件移除、卷积类型、网络深度和通道宽度。$L^3$-AgriUAVNet 使用标准卷积，$L^3$-AgriUAVNet-DW 为其他配置相同的 DWConv 基线。
   ],
-) <fig:ablation_design>
+) <fig:l3_ablation>
 
-$L^3$-AgriUAVNet 的结构选择由农业 UAV 前端的参数预算驱动。由于早期原型同时改变了网络结构、损失函数和训练配置，最终设计主要依据@fig:ablation_design 与@tab:ablation 中的单因素消融，以保证组件贡献可以直接比较。
+$L^3$-AgriUAVNet 的结构选择由农业 UAV 前端的参数预算驱动。最终配置将强度与色彩方向特征共享一条路径的单流 HVI 表征、作为浅层局部主干的两个 RFDN-S，以及一次自条件全局仿射调制组合在一起。由于早期原型同时改变了网络结构、损失函数和训练配置，最终设计主要依据@fig:l3_ablation 与@tab:l3_ablation 中的单因素消融，以保证组件贡献可以直接比较。
+
+=== 消融研究
 
 #figure(
   three-line-table(table(
     columns: 10,
     table.header([变体], [HVI], [GMod], [ESA], [Conv], [d/w], [PSNR↑], [SSIM↑], [MAE↓], [LPIPS↓]),
-    [$L^3$-AgriUAVNet], [$checkmark$], [$checkmark$], [$checkmark$], [std], [2/48], [26.24], [0.893], [0.0452], [0.119],
+    [$L^3$-AgriUAVNet], [$checkmark$], [$checkmark$], [$checkmark$], [std], [2/48], [*26.24*], [*0.893*], [*0.0452*], [*0.119*],
     [w/ DWConv], [$checkmark$], [$checkmark$], [$checkmark$], [DW], [2/48], [25.71], [0.886], [0.0475], [0.129],
     [depth=3], [$checkmark$], [$checkmark$], [$checkmark$], [std], [3/48], [25.66], [0.888], [0.0475], [0.128],
     [w/o ESA], [$checkmark$], [$checkmark$], [--], [std], [2/48], [25.59], [0.887], [0.0475], [0.135],
@@ -261,14 +441,14 @@ $L^3$-AgriUAVNet 的结构选择由农业 UAV 前端的参数预算驱动。由�
     [w/o GMod], [$checkmark$], [--], [$checkmark$], [std], [2/48], [23.63], [0.849], [0.0599], [0.184],
   )),
   caption: [
-    $L^3$-AgriUAVNet 的消融实验结果。通过一次移除或替换一个组件来评估各架构贡献。“std”表示标准卷积，“DW”表示深度可分离卷积；$checkmark$ 表示启用，“--”表示禁用。
+    $L^3$-AgriUAVNet 的消融结果。通过一次移除或替换一个组件来评估各架构贡献。“std”表示标准卷积，“DW”表示深度可分离卷积。$checkmark$ 表示启用，“--”表示禁用。
   ],
   kind: table,
-) <tab:ablation>
+) <tab:l3_ablation>
 
-从@tab:ablation 可见，全局仿射调制对当前结构贡献最大：移除 GMod 后 PSNR 下降约 2.62 dB。GMod 的主要收益在于缓解低光场景中常见的全局曝光漂移与通道间颜色失衡问题——夜间 UAV 图像的退化不仅表现为局部暗区细节丢失，还表现为不同图像批次之间整体亮度和白平衡基线的波动，仅依靠局部卷积很难稳定建模这种全局分布偏移。移除 HVI 表征和 ESA 分别带来约 1.73 和 0.65 dB 的下降，说明全局曝光调节、强度–色彩组织与局部空间响应在浅层主干中发挥互补作用。其中，ESA 的收益集中体现在局部结构恢复上：夜间农田图像中的叶缘、铃壳边界、行间纹理和棉絮轮廓通常同时面临低对比度与噪声污染，若没有显式的空间注意力机制，网络往往会优先拟合大面积低频区域，从而牺牲对高频细节的表达。将标准卷积替换为深度可分离卷积后 PSNR 下降 0.54 dB，但参数量由 0.139 M 降至 0.07 M，表明通道间充分混合对于该低深度网络仍然重要，DWConv 变体可作为算力极端受限平台的备选方案。
+@tab:l3_ablation 显示，全局仿射调制对当前结构贡献最大：移除 GMod 后，PSNR 下降约 2.62 dB。移除 HVI 表征和 ESA 分别带来约 1.73 和 0.65 dB 的下降，说明全局曝光调节、强度–色彩组织与局部空间响应在浅层主干中发挥互补作用。将标准卷积替换为深度可分离卷积后，PSNR 下降 0.54 dB，表明通道间充分混合对于该低深度网络仍然重要。
 
-网络深度与宽度同样存在明确的适配区间。depth=1、depth=4 和 width=64 配置的 PSNR 分别为 24.48、24.43 和 24.66 dB，均低于默认的 depth=2/width=48；depth=3 或 width=32 也造成中度下降。这一结果说明，当前参数预算下的最优配置来自适度宽度与有限深度的平衡，而非简单增加层数或通道数；过深或过宽的主干会引入优化困难与过拟合风险，性能提升来源于模块协同设计与合理的复杂度配置，而非简单参数堆叠。
+网络深度与宽度同样存在明确的适配区间。depth=1、depth=4 和 width=64 配置的 PSNR 分别为 24.48、24.43 和 24.66 dB，均低于默认的 depth=2/width=48；depth=3 或 width=32 也造成中度下降。这一结果说明，当前参数预算下的最优配置来自适度宽度与有限深度的平衡，而非简单增加层数或通道数。
 
 配对统计与点估计保持一致。$L^3$-AgriUAVNet 相对 $L^3$-AgriUAVNet-DW 的逐图像块 PSNR 平均提高 0.5366 dB（95% bootstrap CI $[0.5102, 0.5628]$，Holm 校正 $p < 0.001$）；相对移除 ESA、HVI 和 GMod 的变体，增益分别为 0.6518、1.7276 和 2.6199 dB。所有变体共享同一测试索引，进一步确认了各组件与卷积配置的稳定贡献。
 
@@ -277,42 +457,42 @@ $L^3$-AgriUAVNet 的结构选择由农业 UAV 前端的参数预算驱动。由�
 #figure(
   image("fig6_real_low_light.png", width: 100%),
   caption: [
-    真实低光玉米苗 UAV 图像块上的定性比较。依次展示 Raw、RFDN、Retinexformer、LLFormer 和 $L^3$-AgriUAVNet。该数据与用于退化参数标定的 26 张棉花低光图像相互独立，并采用视觉观察与@tab:real_no_ref 的无参考统计进行联合评价。
+    真实低光玉米苗 UAV 图像块上的定性比较。依次展示 Raw、RFDN、Retinexformer、LLFormer 和 $L^3$-AgriUAVNet。该数据与用于退化参数标定的 26 张棉花低光图像相互独立，并采用视觉观察与@tab:l3_real_no_ref 的无参考统计进行联合评价。
   ],
-) <fig:real>
+) <fig:l3_real>
 
 #figure(
   three-line-table(table(
     columns: 8,
     table.header([方法], [NIQE↓], [BRISQUE↓], [欠曝像素↓], [RGB 均衡偏差↓], [Tenengrad], [边缘密度], [局部对比度]),
     [Raw], [8.15], [52.21], [23.74%], [0.0346], [33.16], [0.0792], [6.48],
-    [LLFormer], [8.50], [47.96], [0.00%], [0.0167], [102.73], [0.3036], [19.82],
+    [LLFormer], [8.50], [47.96], [0.00%], [*0.0167*], [102.73], [0.3036], [19.82],
     [$L^3$-AgriUAVNet], [8.43], [48.58], [0.00%], [0.0233], [102.87], [0.2990], [19.89],
-    [Retinexformer], [8.77], [47.29], [0.00%], [0.0222], [102.93], [0.3033], [19.95],
+    [Retinexformer], [8.77], [*47.29*], [0.00%], [0.0222], [102.93], [0.3033], [19.95],
     [RFDN], [9.05], [52.74], [0.00%], [0.0611], [75.22], [0.2147], [15.60],
   )),
   caption: [
-    真实低光玉米苗数据的无参考评价。Raw 与各增强输出按文件名一一对齐（$n = 308$ 个图像块），各数值为逐图计算后的算术均值；该评价数据独立于用于退化参数标定的 26 张棉花低光图像。NIQE、BRISQUE、欠曝像素比例和 RGB 通道均衡偏差设有明确优化方向，Tenengrad、边缘密度和局部对比度作为描述性结构响应，不进行单调优劣排序。表中 $L^3$-AgriUAVNet 指标准卷积配置。
+    真实低光玉米苗数据的无参考评价。Raw 与各增强输出按文件名一一对齐（$n = 308$ 个图像块），各数值为逐图计算后的算术均值；该评价数据独立于用于退化参数标定的 26 张棉花低光图像。NIQE、BRISQUE、欠曝像素比例和 RGB 通道均衡偏差设有明确优化方向，Tenengrad、边缘密度和局部对比度作为描述性结构响应，不进行单调优劣排序。表中的 $L^3$-AgriUAVNet 指标准卷积配置。
   ],
   kind: table,
-) <tab:real_no_ref>
+) <tab:l3_real_no_ref>
 
-在 308 个真实低光玉米苗图像块 上，定性结果与无参考统计从互补维度刻画了增强效果（@fig:real 和@tab:real_no_ref）。$L^3$-AgriUAVNet 将平均欠曝像素比例从 23.74% 降至近 0，RGB 通道均衡偏差由 0.0346 降至 0.0233（降低约 32.5%），BRISQUE 也从 52.21 降至 48.58。阈值化的欠曝像素比例在所有增强输出上均接近 0，因此该指标用于验证欠曝的消除，而非对增强方法排序。RFDN 的 RGB 通道均衡偏差反而升至 0.0611，说明可见度改善并不必然伴随全局通道关系的校正。
+在 308 个真实低光玉米苗图像块上，定性结果与无参考统计从互补维度刻画了增强效果（@fig:l3_real 和@tab:l3_real_no_ref）。$L^3$-AgriUAVNet 将平均欠曝像素比例从 23.74% 降至近 0，RGB 通道均衡偏差由 0.0346 降至 0.0233（降低约 32.5%），BRISQUE 也从 52.21 降至 48.58。阈值化的欠曝像素比例在所有增强输出上均接近 0，因此该指标用于验证欠曝的消除，而非对增强方法排序。RFDN 的 RGB 通道均衡偏差反而升至 0.0611，说明可见度改善并不必然伴随全局通道关系的校正。
 
-结构响应指标进一步揭示了增强前后的表观变化：Tenengrad 从 33.16 提高至 102.87，边缘密度和局部对比度同步增加，说明叶片边缘和局部纹理响应得到强化。$L^3$-AgriUAVNet 的 NIQE 为 8.43，与 Raw 的 8.15 接近，而 LLFormer 和 Retinexformer 分别在部分指标上取得更优结果（如 LLFormer 的 RGB 均衡偏差为 0.0167，Retinexformer 的 BRISQUE 为 47.29）。NIQE 与 BRISQUE 之间的分歧进一步支持将无参考指标联合解读，而不是把任一分数当作独立的增强排序依据。结合@fig:real 的视觉结果，这些统计共同表明 $L^3$-AgriUAVNet 在校正欠曝和全局通道偏差的同时保持了较强的结构响应。
+结构响应指标进一步揭示了增强前后的表观变化：Tenengrad 从 33.16 提高至 102.87，边缘密度和局部对比度同步增加，说明叶片边缘和局部纹理响应得到强化。$L^3$-AgriUAVNet 的 NIQE 为 8.43，与 Raw 的 8.15 接近，而 LLFormer 和 Retinexformer 分别在部分指标上取得更优结果。NIQE 与 BRISQUE 之间的分歧进一步支持将无参考指标联合解读，而不是把任一分数当作独立的增强排序依据。结合@fig:l3_real 的视觉结果，这些统计共同表明 $L^3$-AgriUAVNet 在校正欠曝和全局通道偏差的同时保持了较强的结构响应。
 
-这种差异对农业场景具有实际影响。夜间农田图像中的可判别信息往往集中在冠层表面、行间阴影、棉絮反射和叶片边缘等局部区域之间的亮度与颜色对比上。若增强结果出现通道比例失衡或局部过曝光，模型就更容易将白絮高亮区域与噪声放大的亮斑混淆，或将叶片阴影误判为表型差异。稳定的通道比例与较强的结构响应，有利于增强图像与下游识别模型在正常曝光域中形成更一致的判别条件。
-
-=== 下游任务增强实验
+=== 下游应用导向评价
 
 #figure(
   image("fig7_detection_examples.png", width: 100%),
   caption: [
-    YOLOv8n 的应用示例与汇总 mAP。逐图示例展示增强对轻量检测器的不同影响，定量结果由@tab:downstream 的聚合指标给出。
+    YOLOv8n 的应用示例与汇总 mAP。逐图示例展示增强对轻量检测器的不同影响，定量结果由@tab:l3_yolov8n 的聚合指标给出。
   ],
-) <fig:res_task>
+) <fig:l3_res_task>
 
-下游检测作为同一玉米苗低光数据集上的第二种评价路径，用于考察增强表征的农业应用价值。@fig:res_task 展示了有代表性的 YOLOv8n 检测示例及汇总比较。按照实验设置中的统一协议，YOLOv8n@jocher2023yolov8 分别在 Raw、$L^3$-AgriUAVNet、RFDN、LLFormer 和 Retinexformer 输入分布上训练与测试，测试集包含 139 个图像块。实验并非追求最优检测精度，而是考察增强前端是否能恢复有助于农业语义判别的视觉表征。
+下游检测作为同一玉米苗低光数据集上的第二种评价路径，用于考察增强表征的农业应用价值。@fig:l3_res_task 展示了有代表性的 YOLOv8n 检测示例及汇总比较。按照实验设置中的统一协议，YOLOv8n@jocher2023yolov8 分别在 Raw、$L^3$-AgriUAVNet、RFDN、LLFormer 和 Retinexformer 输入分布上训练与测试。
+
+==== YOLOv8n：轻量检测器
 
 #figure(
   three-line-table(table(
@@ -325,12 +505,14 @@ $L^3$-AgriUAVNet 的结构选择由农业 UAV 前端的参数预算驱动。由�
     [RFDN], [0.1646], [0.0469], [0.3285], [0.2257],
   )),
   caption: [
-    YOLOv8n 应用导向评价。检测器在 Raw 或各增强方法对应的输入分布上训练和评估，测试集包含 139 个图像块。表中报告 mAP、Precision 和 Recall，以比较不同增强输入对轻量检测器的影响。
+    YOLOv8n 应用导向评价。检测器在 Raw 或各增强方法对应的输入分布上训练和评估，测试集包含 139 个图像块。表中报告 Precision、Recall 和 mAP，以比较不同增强输入对轻量检测器的影响。
   ],
   kind: table,
-) <tab:downstream>
+) <tab:l3_yolov8n>
 
-@tab:downstream 显示，$L^3$-AgriUAVNet 将 mAP\@0.5 从 Raw 的 0.1393 提高至 0.1596，相对增幅为 14.6%；Precision 由 0.2984 提高至 0.3139，Recall 则由 0.2257 变为 0.2065，呈现精度–召回率权衡。RFDN 的 mAP\@0.5 为 0.1646，略高于 $L^3$-AgriUAVNet，但其参数量和 MACs 分别约为后者的 2.7 和 2.8 倍。$L^3$-AgriUAVNet 因而在极低增强预算下保持了接近 RFDN 的下游性能。LLFormer 虽具有最高的上游 PSNR，其 YOLOv8n mAP\@0.5 仅为 0.0601，说明重建指标与下游效用并不总是同步变化——在合成数据上取得更高 PSNR 的方法可能因过度平滑丢失幼苗目标的微弱纹理证据，反而损害检测性能。
+@tab:l3_yolov8n 显示，$L^3$-AgriUAVNet 将 mAP\@0.5 从 Raw 的 0.1393 提高至 0.1596，相对增幅为 14.6%；Precision 由 0.2984 提高至 0.3139，Recall 则由 0.2257 变为 0.2065，呈现精度–召回率权衡。RFDN 的 mAP\@0.5 为 0.1646，略高于 $L^3$-AgriUAVNet，但其参数量和 MACs 分别约为后者的 2.7 和 2.8 倍。$L^3$-AgriUAVNet 因而在极低增强预算下保持了接近 RFDN 的下游性能。LLFormer 虽具有最高的上游 PSNR，其 YOLOv8n mAP\@0.5 仅为 0.0601，说明重建指标与下游效用并不总是同步变化。
+
+==== YOLOv8s：高容量检测器
 
 #figure(
   three-line-table(table(
@@ -343,33 +525,51 @@ $L^3$-AgriUAVNet 的结构选择由农业 UAV 前端的参数预算驱动。由�
     [Retinexformer], [0.3382], [0.4869], [0.3333],
   )),
   caption: [
-    YOLOv8s 应用导向评价。检测器使用相同的数据划分和训练流程，分别在 Raw 输入和各增强方法的输出分布上独立训练。测试集包含 139 个图像块，表中数值为单次运行的点估计。
+    YOLOv8s 应用导向评价。检测器使用相同的数据划分和训练 schedule，分别在 Raw 输入和各增强方法的输出分布上独立训练。测试集包含 139 个图像块，表中数值为单次运行的点估计。
   ],
   kind: table,
-) <tab:downstream_s>
+) <tab:l3_yolov8s>
 
-进一步地，本研究在容量更高的 YOLOv8s 上重复了上述对比（@tab:downstream_s）。Raw 输入的 mAP\@0.5 为 0.3574，而 $L^3$-AgriUAVNet、RFDN、LLFormer 和 Retinexformer 增强输入分别为 0.3338、0.3328、0.3370 和 0.3382，呈现出与 YOLOv8n 不同的响应模式。结合 YOLOv8n 的正向响应，可以形成一个容量感知的选择规则：容量较小的检测器对输入可见度和局部结构预处理更敏感，能够从增强中获益；而容量较大的检测器具有更强的特征提取和输入分布适应能力，预增强的边际作用因而下降，本实验中 Raw 输入在 YOLOv8s 上表现最好，因此对与 YOLOv8s 相当的较高容量检测器不应默认启用增强。需要强调的是，预增强的定位并非与更大容量检测器竞争，而是在检测器本身受限于轻量档位时的补救手段：$L^3$-AgriUAVNet（0.139 M 参数）与 YOLOv8n（约 3.2 M 参数@jocher2023yolov8）的组合仍远小于单独的 YOLOv8s（约 11.2 M 参数），在目标设备无法承担更大检测器时提供额外的任务效用。检测器容量及其特征提取能力对预增强边际收益的影响，还将在重复训练和更多检测架构中继续验证。
+@tab:l3_yolov8s 显示，Raw 输入的 mAP\@0.5 为 0.3574，$L^3$-AgriUAVNet、RFDN、LLFormer 和 Retinexformer 分别为 0.3338、0.3328、0.3370 和 0.3382，呈现出与 YOLOv8n 不同的响应模式。检测器容量及其特征提取能力可能改变预增强的边际收益，这一关系将在重复训练和更多检测架构中继续验证。
 
-低光增强会同时改变检测器的输入分布和任务表现。$L^3$-AgriUAVNet 以显著低于 RFDN 的增强预算取得接近的 YOLOv8n mAP，并相对 Raw 提高 mAP 和 Precision，将上游的质量–效率优势延伸至轻量检测场景。不同容量检测器的响应差异则表明，增强器与检测器之间存在联合选择与联合优化的空间，农业视觉系统应把增强器与下游模型作为联合管线选择，而不是默认对所有检测器使用相同预处理。
+==== 结果小结
 
-== 低光条件下的脱叶率吐絮率实时识别模型训练
+低光增强会同时改变检测器的输入分布和任务表现。$L^3$-AgriUAVNet 以显著低于 RFDN 的增强预算取得接近的 YOLOv8n mAP，并相对 Raw 提高 mAP 和 Precision，将上游的质量–效率优势延伸至轻量检测场景。不同容量检测器的响应差异则表明，增强器与检测器之间存在联合选择与联合优化的空间。
 
-在增强前端确定后，低光场景识别训练采用“预训练—微调—难例强化”的三阶段策略。首先在全天候混合数据集上进行监督预训练，以学习对作物冠层与背景差异更具普适性的基础表征；随后在真实低光样本上进行针对性微调，通过缩小域差使模型参数更贴近夜间成像分布；最后引入在线难例挖掘强化边界样本，以提升在低对比度与噪声放大条件下的判别稳定性。
+== 讨论
 
-上述三阶段训练策略的核心目的，是避免模型在低光场景中出现“两类失配”：一类是语义失配，即模型将正常曝光域中学到的判别规则直接迁移到夜间输入，导致对亮度与颜色漂移过于敏感；另一类是优化失配，即若直接用有限夜间样本从头训练，模型容易被噪声和长尾类别主导，难以形成稳定的判别边界。通过“先学习通用表征、再贴近目标域、最后强化困难样本”的渐进式训练路径，可以在保持基础语义稳定性的同时，有针对性地压缩昼夜域差，并增强对弱纹理、模糊边界和低对比度样本的适应能力。这种训练范式本质上对应了农业端侧模型从实验室数据走向真实复杂环境时所必须经历的域适配过程。
+=== 农业约束如何塑造增强架构
 
-== 实验结果评估
+农业 UAV 低光增强面对的是相互耦合的任务约束。真实场景难以获取严格对齐的正常曝光参考，要求训练数据既可控又能保留农业影像的亮度与通道关系；幼苗边界、作物行和细粒度叶片纹理对平滑与色偏敏感，要求增强器同时组织强度、颜色和局部结构；机载或近边缘端的资源预算又限制了网络深度与分支数量。本章的校准图像域退化、单流 HVI 表征和浅层蒸馏主干分别对应这三类约束，构成从数据到架构的一致设计逻辑。
 
-在全天候双指标识别任务上，本研究从精度、速度与鲁棒性三个维度评估整链路效果。精度方面，在多光照测试集上，整链路的双指标估计误差相较第三章基线有所降低，说明增强前端能够有效恢复有利于下游判别的结构与颜色线索；速度方面，端侧推理仍维持秒级响应，能够满足作业在线反馈的节拍需求；鲁棒性方面，在阴影、逆光与弱光条件下均可保持相对稳定的输出，误差波动处于可控范围。错误案例分析显示，极端逆光与强风抖动仍会显著扰动输入分布并放大几何与成像噪声，后续可通过多帧融合、快门同步与自适应曝光策略进一步提升稳定性。
+$L^3$-AgriUAVNet 将 HVI 表征、局部特征蒸馏和全局曝光调制置于同一浅层路径，使强度与颜色信息在共享特征中持续交互。相较于强度–颜色双分支及跨注意力结构，单流组织减少了重复特征提取与分支交互开销；两个 RFDN-S 负责局部纹理提取，ESA 强化空间结构响应，GMod 则以全局描述子调节曝光与通道比例。该组合并非追求模块数量，而是为农业影像的结构敏感性和紧凑计算预算分配互补功能。
 
-从系统视角看，本研究结果表明“增强前端 + 轻量识别模型”的分层架构适用于全天候农业场景。与由单一识别网络直接处理全部光照变化相比，前端增强模块先在输入层稳定亮度、颜色和局部结构，再由下游网络执行双指标识别，更便于分别优化、部署和诊断。
+=== 质量–效率配置的形成
 
-实验结果同时表明，全天候鲁棒性来源于数据构建、模型结构、损失设计和训练策略的共同作用。若缺少低光合成数据的分布对齐，增强模块难以获得稳定监督；若缺少轻量注意力与全局调制，模型难以同时处理局部细节恢复与全局曝光漂移；若缺少后续真实低光微调与难例强化，识别模型仍可能在域外场景中出现明显波动。
+消融结果表明，GMod、HVI 和 ESA 分别承担全局校正、强度–颜色组织和局部结构强化功能，其中 GMod 带来的增益最大，说明全局曝光与通道比例变化是当前农业低光数据的重要变异来源。标准卷积在当前浅层主干中优于 DWConv，进一步表明当网络仅含两个 RFDN-S 时，充分的跨通道混合比继续压缩单层计算更有利于联合建模 HVI 三个分量。网络深度和宽度实验则将最终配置确定为两个 48 通道块，使结构选择由质量–效率证据共同驱动。
 
-当然，错误案例也提示了当前方案的适用边界。当场景同时出现极端逆光、强反射、快速运动模糊和局部遮挡时，增强模块与识别模块之间的误差仍可能累积放大，导致边界类样本出现不稳定预测。这说明全天候识别研究下一步仍需在多帧信息融合、曝光控制与不确定性估计方面进一步推进，使模型不仅“平均上有效”，也能在极端场景下具备可解释的风险输出能力。
+不同指标刻画了这一配置的不同侧面。LLFormer 在 PSNR、MAE 和 LPIPS 上占优，SCI 的参数量与 MACs 更低；$L^3$-AgriUAVNet 以 0.139 M 参数获得最高 SSIM 和具有竞争力的 PSNR，并保持 0.79 MiB 的 ONNX 文件和较低的软件端推理时间。这说明本章的优势不是单一指标最大化，而是在结构质量、模型规模、计算量和实际软件效率之间形成适合农业边缘视觉的组合。固定 ONNX Runtime Web/WebGPU 协议下的 iPad 结果进一步把结构层面的紧凑性转化为设备侧可观测收益，使质量–效率配置不只依赖参数量或 MACs 推断。
 
-== 小结
+=== 检测器容量相关的应用响应
 
-本研究将低光增强模块并入全天候识别框架，并通过模型设计、对比实验和真实场景分析验证了其有效性。实验结果表明，增强前端能够在弱光条件下改善结构与颜色信息恢复，从而提升脱叶率与吐絮率识别的精度与鲁棒性。
+下游结果显示，预增强的作用与检测器容量相关。在轻量 YOLOv8n 上，$L^3$-AgriUAVNet 将 mAP\@0.5 由 0.1393 提高至 0.1596，并提高 Precision，说明紧凑检测器能够利用增强后的可见度与结构响应；RFDN 获得略高的 mAP，但需要约 2.7 倍参数量和 2.8 倍 MACs，进一步体现了增强前端自身预算的重要性。另一方面，LLFormer 的上游 PSNR 最高，但其 YOLOv8n 表现较低，表明像素重建排名不能直接替代任务效用评价。
 
-结果表明，成熟期棉花全天候识别需要围绕真实成像退化和端侧部署约束，综合考虑数据构建、增强前端、识别模型和系统评测。该方法为后续章节中的空间聚合与处方图生成提供了更稳定的输入基础。
+YOLOv8s 呈现出不同模式：Raw 输入的 mAP\@0.5 为 0.3574，而各增强输入为 0.3328–0.3382。结合 YOLOv8n 的正向响应，可以形成一个更具应用意义的解释：容量较小的检测器对输入可见度和局部结构预处理更敏感，而容量较大的检测器具有更强的特征提取和输入分布适应能力，预增强的边际作用因而发生变化。当前结果支持“检测器容量调节增强响应”这一经验关系，也说明农业视觉系统应把增强器与下游模型作为联合管线选择，而不是默认对所有检测器使用相同预处理。因此，预增强的定位并非与更大容量检测器竞争，而是在检测器本身受限于轻量档位时的补救手段：$L^3$-AgriUAVNet（0.139 M 参数）与 YOLOv8n（约 3.2 M 参数@jocher2023yolov8）的组合仍远小于单独的 YOLOv8s（约 11.2 M 参数），在目标设备无法承担更大检测器时提供额外的任务效用。
+
+=== 田间部署的操作启示
+
+上述结果支持一种面向低光农业 UAV 管线的实用选择流程。部署设计者应首先确定下游检测器类别和可用的预处理预算，再在预期作业条件下采集的代表性验证子集上比较 Raw 与增强输入。对于与 YOLOv8n 相当的轻量检测器，当低光任务性能成为限制因素时可启用增强：严格边缘预算下 $L^3$-AgriUAVNet 是优选方案；而当其略高的 YOLOv8n mAP 足以抵消约 2.7 倍参数量和 2.8 倍 MACs 的开销时，也可考虑 RFDN。对于与 YOLOv8s 相当的较高容量检测器，由于本实验中 Raw 输入表现最好，不应默认启用增强。无论哪种情况，检测器都应使用与部署时预期一致的输入分布进行训练或适配。
+
+这一容量感知规则将实验证据转化为可操作的选择，而非为所有作业任务规定单一的预处理设置。当下游检测器能从可见度改善中受益时，紧凑的增强前端可帮助农业监测系统利用清晨或傍晚补充时段采集的影像；而当检测器已能有效处理 Raw 输入时，跳过增强则可避免不必要的计算和分布偏移。本研究建立了图像、设备和检测三个层面的证据；后续田间研究可将由此得到的配置选择与巡查覆盖范围、作业完成情况和作物管理决策等农学与作业结果相联系。
+
+=== 扩展方向
+
+现有退化参数通过 26 张真实低光棉花影像的统计分布和视觉观感进行人工标定。当前评价聚焦于由邻近日期航线任务所代表的一致农业生产环境内的增强效果。覆盖更多作物品种、管理制度、传感器、天气条件和环境光源的更广泛地理数据，将支持单独开展跨域迁移研究。引入 RAW 或多光谱数据还可将退化模型扩展到本章图像域设定之外。
+
+在应用侧，可通过多 seed 重复训练，并扩展至 YOLOv11n、RT-DETR 和轻量分割模型，检验容量相关响应在不同架构与任务中的一致性；增强器–检测器联合优化则有望使前端恢复目标直接服务于农业任务特征。设备侧评价还可延伸至 Jetson 或实际 UAV 计算单元上的端到端延迟、峰值内存和能耗，从而把当前软件端质量–效率配置推进到完整农业作业管线。
+
+== 本章小结
+
+本章面向农业 UAV 影像中的低照度、结构弱化和通道比例偏移问题，构建了由真实低光统计分布与视觉观感共同人工标定的校准图像域退化流程，并提出采用单流 HVI 表征路径的浅层 $L^3$-AgriUAVNet。该模型以 0.139 M 参数在合成配对测试集上达到 26.24 dB PSNR 和 0.893 SSIM，在统一的 $1 times 3 times 224 times 224$ 输入下仅需 6.252 GMACs，实现了增强质量、模型规模与计算效率的有效平衡。
+
+消融与逐图像块配对分析表明，GMod、HVI 和 ESA 分别贡献约 2.62、1.73 和 0.65 dB 的 PSNR 增益，标准卷积在当前浅层配置中比 DWConv 基线高 0.54 dB。独立于 26 张棉花低光标定图像的 308 个真实低光玉米苗图像块进一步验证了模型的场景适应性：欠曝像素比例由 23.74% 降至近 0，RGB 通道均衡偏差由 0.0346 降至 0.0233。增强输入还使 YOLOv8n 的 mAP\@0.5 相对 Raw 提高 14.6%。这些结果共同表明，$L^3$-AgriUAVNet 能够以紧凑的增强预算兼顾结构恢复、通道比例稳定和下游任务效用，可作为资源受限农业 UAV 视觉管线的低光增强前端。
