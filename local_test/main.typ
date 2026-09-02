@@ -16,7 +16,7 @@
   direction: "农业电气自动化",
   csupervisor: "陈学庚",
   esupervisor: "Prof. Xuegeng Chen",
-  date: (year: 2026, month: 6),
+  date: (year: 2026, month: 9),
   degree-type: "academic",
   cabstract: include "cabstract.typ",
   ckeywords: ("棉花", "无人机遥感", "脱叶率", "吐絮率", "轻量级模型", "低光增强"),
@@ -30,17 +30,18 @@
     "Low-Light Enhancement",
   ),
   acknowledgements: include "acknowledgements.typ",
+  symbols: include "symbols.typ",
   outlinedepth: 3,
   blind: false,
   listofimage: true,
   listoftable: true,
-  listofcode: true,
+  listofcode: false,
   alwaysstartodd: false,
   preview: false,
   cleandeclaration: true,
+  override-bib: true,
   bibcontent: read("ref.bib"),
   bibstyle: "numeric",
-  bibversion: "2015",
   doc,
 )
 
@@ -78,7 +79,7 @@
 
 （1）数据集构建与评测协议是脱叶率与吐絮率识别研究开展的基础。第 2 章围绕真实生产场景建立了多时相、多光照和复杂背景条件下的棉花脱叶率与吐絮率数据集，并统一了采集、人工真值统计、位置信息解析、图像增强、边缘样本剔除和数据组织流程。针对固定航线农业监测影像类内相似性高、空间连续性强的特点，本研究将当前协议定位为目标作业域内的图像块级评价，用于验证方法可行性并支持统一条件下的模型比较。上述工作为后续深度模型训练、传统基线比较、低光数据构建和田间流程验证提供了统一的数据基础，也保证了不同章节结果之间的可比性。
 
-（2）RGB 像素向量与传统机器学习模型构成了双指标识别的工程基线。PCA+Logistic Regression 的测试集 Macro-F1 高于 Random Forest 系列，Accuracy 与 Macro-F1 的差异反映出长尾等级条件下的多数类偏置。针对背景干扰和像素向量缺乏语义约束的问题，第 3 章进一步分析了光谱指数、前景分割、形态和纹理等结构化特征方案。上述方案为后续可解释建模提供候选变量，尚未纳入本章定量实验。
+（2）RGB 像素向量与传统机器学习模型构成了双指标识别的工程基线。PCA+Logistic Regression 的测试集 Macro-F1 高于 Random Forest 系列，Accuracy 与 Macro-F1 的差异反映出长尾等级条件下的多数类偏置。针对背景干扰和像素向量缺乏语义约束的问题，第 3 章进一步分析了光谱指数、前景分割、形态和纹理等结构化特征方案，作为性能的对比基本，用于同后续研究相比较。
 
 （3）RTCMNet 实现了面向端侧部署的双指标联合识别。模型通过共享骨干、多尺度卷积注意力和双分类头联合建模脱叶率与吐絮率，在目标作业域内的五折评价中取得 $0.93 plus.minus 0.02$ 的双任务平均准确率，参数量为 0.37 M，计算量为 0.19 GMACs，端侧单张推理耗时 32 ms。所有对比模型采用相同的数据索引、训练配置和评价指标，结果支持当前任务条件下的相对性能与部署代价比较。消融实验和特征可视化进一步验证了关键结构的作用。
 
@@ -102,11 +103,11 @@
 
 尽管本研究围绕成熟期棉花双指标识别与大田验证取得了阶段性成果，但仍存在以下不足。
 
-（1）当前评测结论具有明确的作业域边界。本研究数据主要来自特定区域、特定年份、特定品种以及固定航线和采集设备条件，连续棉田影像还具有较强的空间相关性。当前图像块级划分与五折评价主要服务于域内方法可行性验证和统一条件下的模型相对比较，因而文中报告的识别指标不代表跨区域、跨品种或跨年份条件下的独立泛化精度。这一边界不影响当前协议下的模型比较结论，但限制了结果向其他生产域直接外推；跨域泛化能力仍需在未来获得更大范围、多年度数据后另行评价。
+（1）当前评测结论具有明确的作业域边界。本研究数据主要来自特定区域、特定年份、特定品种以及固定航线和采集设备条件，连续的大田影像还具有较强的空间相关性和结构相似性。当前的数据集主要服务于方法可行性验证和统一条件下的模型相对比较，因而文中报告的识别指标不代表跨区域、跨品种或跨年份条件下的泛化精度。这一边界不影响当前任务下的模型比较结论，但限制了结果向其他生产过程直接外推；跨域泛化能力仍需在未来获得更大范围、多年度、多品种数据后另行评价。
 
-（2）标签体系仍以人工统计与分级规则为基础。脱叶率与吐絮率属于连续变化的管理状态指标，当前采用的分级标签虽然便于建模与评测，但在边界样本和空间梯度显著区域中，仍可能存在人为离散化带来的信息损失。这意味着模型输出距离更细粒度的连续成熟状态估计仍有一定距离。
+（2）由于实际数据采样条件限制，标签体系仍以人工统计与分级规则为基础。脱叶率与吐絮率属于连续变化的管理状态指标，当前采用的分级标签虽然便于建模与评测，但在边界样本和空间梯度显著区域中，仍可能存在人为离散化带来的信息损失。这意味着模型输出距离更细粒度的连续成熟状态估计仍有一定距离。
 
-（3）低光数据构建与增强—识别证据仍存在边界。本研究低光退化主要在 RGB 域完成，尚未显式建模 RAW 采集、去马赛克和完整 ISP 链路；真实日落棉田实验缺少同步人工等级真值，只能支持串联可行性和预测分布分析，不能量化棉花双指标识别精度增益。下游检测结果也显示增强收益具有模型依赖性：YOLOv8n 获得正向响应，而 YOLOv8s 的 Raw 输入表现更好。因此，增强前端需按下游模型和输入条件选择，并仍可能在极端逆光、强反光和严重运动模糊条件下失效。
+（3）低光数据构建与增强—识别证据仍存在边界。本研究低光退化主要在 RGB 域完成，尚未显式建模 RAW 采集、去马赛克和完整 ISP 链路；低光增强算法依赖人工合成数据，可支持串联可行性和预测分布分析，但不能量化棉花双指标识别精度增益。下游检测结果也显示增强收益具有模型依赖性。因此，增强前端需按下游模型和输入条件选择，并仍可能在极端逆光、强反光和严重运动模糊条件下失效。
 
 （4）田间验证的覆盖范围仍需扩展。第 7 章在与数据采集阶段一致的目标作业域内开展流程验证，重点分析空间分布、时序演化及其与现场观察的对应关系；后续仍需增加独立地块、同步人工等级记录和长期作业数据，以进一步形成可量化、可持续的田间评价体系。
 
@@ -123,130 +124,14 @@
 （4）推进田间验证由“结果一致性”走向“长期应用能力”评价。后续工作应在更大范围大田场景中开展连续观测与人工复核，逐步建立识别结果、时序演化、田间调查和长期作业记录之间的对应关系，使模型评价从单次实验效果提升到长期作业支撑能力的系统评价。
 
 // ========== 附录 ==========
-#appendix()
-
-= 主要符号与缩略语
-
-#booktab(
-  columns: (1.5fr, 2.7fr, 2.3fr),
-  outlined: false,
-  align: (left, left, left),
-  [符号或缩写],
-  [英文全称],
-  [中文],
-  [$"DR"_t$],
-  [Defoliation Rate on Day $t$],
-  [第 $t$ 天脱叶率],
-  [$"BR"_t$],
-  [Boll Opening Rate on Day $t$],
-  [第 $t$ 天吐絮率],
-  [$L_0$],
-  [Initial Leaf Count],
-  [施药初始叶片数],
-  [$L_t$],
-  [Leaf Count on Day $t$],
-  [第 $t$ 天叶片数],
-  [$B_0$],
-  [Initial Total Boll Count],
-  [施药初始棉铃总数],
-  [$B_t$],
-  [Open Boll Count on Day $t$],
-  [第 $t$ 天开裂棉铃数],
-  [UAV],
-  [Unmanned Aerial Vehicle],
-  [无人机],
-  [RGB],
-  [Red, Green, Blue],
-  [红绿蓝三通道图像],
-  [RGB-D],
-  [Red, Green, Blue and Depth],
-  [彩色-深度多模态数据],
-  [CNN],
-  [Convolutional Neural Network],
-  [卷积神经网络],
-  [RTCMNet],
-  [Real-Time Cotton Monitoring Network],
-  [棉花脱叶率与吐絮率实时监测网络],
-  [MSCA],
-  [Multi-Scale Convolutional Attention],
-  [多尺度卷积注意力],
-  [ESA],
-  [Enhanced Spatial Attention],
-  [增强空间注意力],
-  [GMod],
-  [Global Modulation],
-  [全局调制模块],
-  [GSD],
-  [Ground Sampling Distance],
-  [地面分辨率],
-  [RTK],
-  [Real-Time Kinematic],
-  [实时动态定位],
-  [PPK],
-  [Post-Processed Kinematic],
-  [后处理动态定位],
-  [GCP],
-  [Ground Control Point],
-  [地面控制点],
-  [ROI],
-  [Region of Interest],
-  [感兴趣区域],
-  [PCA],
-  [Principal Component Analysis],
-  [主成分分析],
-  [LR],
-  [Logistic Regression],
-  [逻辑回归],
-  [SVM],
-  [Support Vector Machine],
-  [支持向量机],
-  [RF],
-  [Random Forest],
-  [随机森林],
-  [SPAD],
-  [Soil and Plant Analyzer Development],
-  [叶绿素相对含量指标],
-  [ExG],
-  [Excess Green Index],
-  [超绿指数],
-  [VARI],
-  [Visible Atmospherically Resistant Index],
-  [可见光抗大气植被指数],
-  [NGRDI],
-  [Normalized Green-Red Difference Index],
-  [归一化绿红差异指数],
-  [ISP],
-  [Image Signal Processing],
-  [图像信号处理],
-  [RAW],
-  [Raw Sensor Data],
-  [原始传感器数据],
-  [LiDAR],
-  [Light Detection and Ranging],
-  [激光雷达],
-  [PSNR],
-  [Peak Signal-to-Noise Ratio],
-  [峰值信噪比],
-  [SSIM],
-  [Structural Similarity Index Measure],
-  [结构相似性指标],
-  [LPIPS],
-  [Learned Perceptual Image Patch Similarity],
-  [学习感知图像块相似度],
-  [MAE],
-  [Mean Absolute Error],
-  [平均绝对误差],
-  [Macro-F1],
-  [Macro-Averaged F1 Score],
-  [宏平均 F1 值],
-  [mAP],
-  [mean Average Precision],
-  [平均精度均值],
-  [IoU],
-  [Intersection over Union],
-  [交并比],
+#bibliography(
+  "ref.bib",
+  style: "styles/gb-t-7714-2005-numeric.csl",
+  title: "参考文献",
 )
 
-== 研究过程补充说明
+#appendix()
+
+= 研究过程补充说明
 
 本研究的实验数据、模型代码与田间识别流程均按照“可复现实验”原则管理。后续可在完成数据脱敏和项目验收后，逐步公开可共享部分，促进相关研究复现与应用推广。

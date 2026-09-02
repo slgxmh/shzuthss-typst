@@ -33,7 +33,7 @@
 #import "@preview/gb7714-bilingual:0.2.3": *
 
 // 导入并重导出所有公共符号
-#import "lib/config.typ": appendix, 字体, 字号, 引用记号
+#import "lib/config.typ": appendix, front-heading, 字体, 字号, 引用记号
 #import "lib/utils.typ": chinesenumbering
 #import "lib/components.typ": (
   as-booktab, booktab, chineseoutline, codeblock, listoffigures, three-line-table,
@@ -75,6 +75,7 @@
   eabstract: [],
   ekeywords: (),
   acknowledgements: [],
+  symbols: none,
   // Word 模板中中文正文的首行缩进固定为 1.77em
   // 如果要求严格对应，请将 first-line-indent 设置为 1.77em
   // 这里设置为 2em 是为了更加美观
@@ -267,6 +268,12 @@
     depth: outlinedepth,
     indent: true,
   )
+
+  // ========== 主要符号表 ==========
+  if symbols != none {
+    front-heading("主要符号与缩略语", header: "主要符号与缩略语")
+    symbols
+  }
 
   if listofimage {
     listoffigures(
