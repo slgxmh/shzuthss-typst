@@ -75,7 +75,14 @@ ExG 通过强调绿色通道相对红蓝通道的优势响应，常用于农业�
 
 === 算法流程
 
-整体流程包括图像像素展平、PCA 降维或随机森林输入准备、模型训练、验证集调参与测试集评估。脱叶率与吐絮率均为多等级离散标签（等级划分见@chap:dataset），类别占比呈长尾分布，因此采用 Accuracy 与 Macro-F1 联合评估。Accuracy 反映总体正确率，Macro-F1 反映各等级的均衡识别能力，并作为本章的主要评价指标。
+整体流程包括图像像素展平、PCA 降维或随机森林输入准备、模型训练，以及验证集与测试集评估，具体如@fig:ch3-rgb-ml-flow 所示。脱叶率与吐絮率均为多等级离散标签（等级划分见@chap:dataset），类别占比呈长尾分布，因此采用 Accuracy 与 Macro-F1 联合评估。Accuracy 反映总体正确率，Macro-F1 反映各等级的均衡识别能力，并作为本章的主要评价指标。
+
+#figure(
+  image("rgb_ml_flow.png", width: 100%),
+  caption: "RGB 像素向量的 PCA 与随机森林分类流程。",
+) <fig:ch3-rgb-ml-flow>
+
+PCA+LR 分支由 StandardScaler、256 维 PCA 和 Logistic Regression 串联构成；标准 RF 与类别均衡 RF 则直接接收 RGB 像素向量。三个模型分别针对脱叶率和吐絮率标签进行训练，并在统一数据划分下计算 Accuracy 与 Macro-F1。
 
 为提高可复现实验的可比性，本研究报告一次固定切分实验结果；进一步的稳健性评估应采用多随机种子重复实验，并在跨地块/跨时段切分下报告均值与方差。
 
