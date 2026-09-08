@@ -49,11 +49,11 @@
 
 #include "chapters/数据集/index.typ"
 
-= 基于可见光图像与传统机器学习的棉花双指标识别
+= 基于可见光图像与传统机器学习的脱叶率与吐絮率识别
 
 #include "chapters/光谱指数/index.typ"
 
-= 基于深度学习的实时检测方法
+= 基于深度学习的实时脱叶率与吐絮率识别
 
 #include "chapters/基于深度学习/index.typ"
 

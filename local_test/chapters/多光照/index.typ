@@ -1,5 +1,6 @@
 #import "../../../template.typ": three-line-table
-= 低光增强与下游任务适用性评价
+
+= 低光增强模型与下游任务适用性评价
 
 == 引言
 
@@ -30,9 +31,7 @@
   ],
 ) <fig:l3_network>
 
-==== 设计目标与总体流程
-
-$L^3$-AgriUAVNet 旨在恢复暗区可见度、保留幼苗边界与作物行纹理，并校正低照度和白平衡变化引起的 RGB 通道比例漂移。为适应边缘端参数预算，网络采用受限的主干深度和特征宽度。其整体数据流如@fig:l3_network (a) 所示。设归一化低光输入为 $bold(I)_("rgb") in [0, 1]^(B times 3 times H times W)$，前向过程可写为
+*设计目标与总体流程。*$L^3$-AgriUAVNet 旨在恢复暗区可见度、保留幼苗边界与作物行纹理，并校正低照度和白平衡变化引起的 RGB 通道比例漂移。为适应边缘端参数预算，网络采用受限的主干深度和特征宽度。其整体数据流如@fig:l3_network (a) 所示。设归一化低光输入为 $bold(I)_("rgb") in [0, 1]^(B times 3 times H times W)$，前向过程可写为
 
 $
 bold(Z) & = cal(T)_("HVI")(bold(I)_("rgb")), quad & bold(F)_0 & = phi_h (bold(Z)), \
@@ -42,9 +41,7 @@ $
 
 其中，$cal(T)_("HVI")$ 和 $cal(T)_("HVI")^(-1)$ 分别表示 HVI 正变换与逆变换，$phi_h$ 和 $phi_t$ 表示头部与尾部映射，$cal(B)_i$ 表示 RFDN-S，$cal(G)$ 表示 Global Modulation（GMod）。网络设置两类跳跃连接：$bold(Z)$ 参与 HVI 空间残差重建，$bold(F)_0$ 在尾部与深层调制特征融合。
 
-==== 面向强度与色彩比例建模的 HVI 表征
-
-网络首先将 RGB 转换为 Horizontal/Vertical-Intensity（HVI）表征@yan2025cidnet。对单个像素的归一化通道值 $R, G, B in [0, 1]$，定义强度 $I$、最小通道值 $m$ 和饱和度 $S$ 为
+*面向强度与色彩比例建模的 HVI 表征。*网络首先将 RGB 转换为 Horizontal/Vertical-Intensity（HVI）表征@yan2025cidnet。对单个像素的归一化通道值 $R, G, B in [0, 1]$，定义强度 $I$、最小通道值 $m$ 和饱和度 $S$ 为
 
 $ I = max(R, G, B), quad m = min(R, G, B), quad S = frac(I - m, I + epsilon), $
 
@@ -60,17 +57,13 @@ $ H = C_k (I) S cos(2 pi h), quad V = C_k (I) S sin(2 pi h), quad I = max(R, G, 
 
 逆变换将 $H, V$ 裁剪至 $[-1, 1]$，将 $I$ 裁剪至 $[0, 1]$，并计算 $bar(H) = H / (C_k (I) + epsilon)$ 与 $bar(V) = V / (C_k (I) + epsilon)$。随后由 $h = op("atan2")(bar(V), bar(H)) / (2 pi) mod 1$ 和 $S = op("clip")(sqrt(bar(H)^2 + bar(V)^2 + epsilon), 0, 1)$ 恢复 HSV 参数，经标准 HSV–RGB 分段映射获得 RGB 输出。
 
-==== 浅层单流特征提取
-
-头部映射 $phi_h$ 采用保持空间尺寸的 $3 times 3$ 卷积，将 $bold(Z) in RR^(B times 3 times H times W)$ 投影为
+*浅层单流特征提取。*头部映射 $phi_h$ 采用保持空间尺寸的 $3 times 3$ 卷积，将 $bold(Z) in RR^(B times 3 times H times W)$ 投影为
 
 $ bold(F)_0 = phi_h (bold(Z)) in RR^(B times 48 times H times W). $
 
 主干串联两个 RFDN-S，块内卷积通过填充维持 $H times W$ 分辨率，从而避免连续下采样对幼苗边界和细窄作物行的压缩。三个 HVI 通道在单条共享流中处理，使强度与色彩方向响应在每一层卷积中直接交互，这契合欠曝与通道比例偏移在空间上相互耦合的田间影像特性。由两个块和 48 个通道构成的浅层主干兼顾了当前数据规模与参数预算，其结构变体将在结果部分进行定量比较。
 
-==== RFDN-S 残差特征蒸馏块
-
-主干中的浅层残差特征蒸馏块记为 RFDN-S，完整 RFDN 专指对比实验中的基线网络。每个 RFDN-S 围绕两条非对称路径组织：低成本的蒸馏路径用于保留早期局部响应，收窄至 $C - d$ 通道的细化路径则继续积累邻域上下文。块内不逐级累加残差，而是在注意力加权后以一次块级局部残差维持浅层主干中的直接梯度通路；空间加权则由下一小节所述的精简 ESA 完成。这些选择将 RFDN 的逐级特征蒸馏思想@liu2020residual 适配到浅层农业主干上，其与原始 RFDB 的结构差异汇总于@tab:l3_arch_relation。网络层面，特征融合在各块内部完成，因此两个顺序连接的 RFDN-S 即可满足需求，无需多块输出拼接；由于表征始终保持全分辨率，也不需要上采样恢复头。对于输入 $bold(X) in RR^(B times C times H times W)$，本章取 $C = 48$、蒸馏比 $rho = 0.25$，因此每级蒸馏通道数 $d = floor(rho C) = 12$，连续细化通道数 $r = C - d = 36$。
+*RFDN-S 残差特征蒸馏块。*主干中的浅层残差特征蒸馏块记为 RFDN-S，完整 RFDN 专指对比实验中的基线网络。每个 RFDN-S 围绕两条非对称路径组织：低成本的蒸馏路径用于保留早期局部响应，收窄至 $C - d$ 通道的细化路径则继续积累邻域上下文。块内不逐级累加残差，而是在注意力加权后以一次块级局部残差维持浅层主干中的直接梯度通路；空间加权则由下一小节所述的精简 ESA 完成。这些选择将 RFDN 的逐级特征蒸馏思想@liu2020residual 适配到浅层农业主干上，其与原始 RFDB 的结构差异汇总于@tab:l3_arch_relation。网络层面，特征融合在各块内部完成，因此两个顺序连接的 RFDN-S 即可满足需求，无需多块输出拼接；由于表征始终保持全分辨率，也不需要上采样恢复头。对于输入 $bold(X) in RR^(B times C times H times W)$，本章取 $C = 48$、蒸馏比 $rho = 0.25$，因此每级蒸馏通道数 $d = floor(rho C) = 12$，连续细化通道数 $r = C - d = 36$。
 
 如@fig:l3_network (b) 所示，前三个阶段各自包含蒸馏路径和细化路径。蒸馏路径用 $1 times 1$ 卷积提取 12 通道特征，细化路径用标准 $3 times 3$ 卷积和 LeakyReLU 生成 36 通道特征：
 
@@ -93,9 +86,7 @@ $ cal(B)(bold(X)) = bold(X) + cal(E)(bold(F)_d), $
 
 其中 $cal(E)$ 表示 ESA。局部残差连接保留块输入，并为两个连续 RFDN-S 提供直接的梯度传播路径。
 
-==== 高效空间注意力
-
-Enhanced Spatial Attention（ESA）位于每个 RFDN-S 的特征融合之后（@fig:l3_network (c)）。注意力掩码仅由四种低开销操作计算——通道压缩、跨步空间编码、局部细化和双线性上采样，因此无需在原始分辨率下处理完整特征张量；相比 RFDN 所用的 ESA@liu2020residual，最大池化分支和一个卷积层被省去（@tab:l3_arch_relation）。对输入 $bold(F)_d in RR^(B times 48 times H times W)$，ESA 先用 $1 times 1$ 卷积将通道压缩至 $C_("mid") = 12$。步长为 2 的 $3 times 3$ 卷积随后在降采样特征上编码空间上下文，另一个 $3 times 3$ 卷积进一步细化响应：
+*高效空间注意力。*Enhanced Spatial Attention（ESA）位于每个 RFDN-S 的特征融合之后（@fig:l3_network (c)）。注意力掩码仅由四种低开销操作计算——通道压缩、跨步空间编码、局部细化和双线性上采样，因此无需在原始分辨率下处理完整特征张量；相比 RFDN 所用的 ESA@liu2020residual，最大池化分支和一个卷积层被省去（@tab:l3_arch_relation）。对输入 $bold(F)_d in RR^(B times 48 times H times W)$，ESA 先用 $1 times 1$ 卷积将通道压缩至 $C_("mid") = 12$。步长为 2 的 $3 times 3$ 卷积随后在降采样特征上编码空间上下文，另一个 $3 times 3$ 卷积进一步细化响应：
 
 $
 bold(F)_c & = sigma(phi_(1 times 1)^(e 1)(bold(F)_d)), \
@@ -108,9 +99,7 @@ $ bold(A) = op("sigmoid")(phi_(1 times 1)^(e 3)(op("Up")(bold(F)_s))), quad cal(
 
 ESA 在压缩通道和降采样空间上估计注意力，降低了直接处理完整特征张量的空间开销。所得掩码在保持特征分辨率的同时，自适应调节幼苗边缘、作物行纹理和土壤细节等局部响应。
 
-==== 全局仿射调制
-
-两个 RFDN-S 主要在有限邻域内提取和筛选局部结构，而整幅无人机图像还可能受到统一欠曝或通道增益偏移的影响。Global Modulation（GMod）因此在第二个块之后执行样本级通道调节（@fig:l3_network (d)）。对 $bold(F)_2 in RR^(B times 48 times H times W)$，自适应全局平均池化得到 $bold(z) in RR^(B times 48)$，两层 MLP 按 $48 arrow.r 64 arrow.r 96$ 映射通道描述子：
+*全局仿射调制。*两个 RFDN-S 主要在有限邻域内提取和筛选局部结构，而整幅无人机图像还可能受到统一欠曝或通道增益偏移的影响。Global Modulation（GMod）因此在第二个块之后执行样本级通道调节（@fig:l3_network (d)）。对 $bold(F)_2 in RR^(B times 48 times H times W)$，自适应全局平均池化得到 $bold(z) in RR^(B times 48)$，两层 MLP 按 $48 arrow.r 64 arrow.r 96$ 映射通道描述子：
 
 $ bold(z) = op("GAP")(bold(F)_2), quad [Delta bold(g), bold(b)] = op("MLP")(bold(z)). $
 
@@ -122,9 +111,7 @@ $ bold(F)_m = bold(F)_2 dot.o (bold(1) + Delta bold(g)) + bold(b). $
 
 从操作形式看，GMod 与 Squeeze-and-Excitation（SE）通道重标定@hu2018senet 和 Feature-wise Linear Modulation（FiLM）@perez2018film 均相关，但三者作用方式不同。SE 通常由全局描述子生成 sigmoid 通道权重，只执行乘性重标定；FiLM 使用条件信息生成特征级尺度与偏置，条件通常来自另一输入或网络分支。本章 GMod 直接以当前增强特征的 GAP 描述子作为自条件，同时预测增益残差和加性偏置，仅在第二个 RFDN-S 后执行一次，并通过零初始化保持训练初期的恒等映射。这一配置以较低开销为浅层增强主干提供了全局曝光和通道比例调节能力。
 
-==== HVI 空间残差重建与模型配置
-
-尾部将浅层特征 $bold(F)_0$ 与调制特征 $bold(F)_m$ 在通道维拼接，形成 $B times 96 times H times W$ 的融合输入。$phi_t$ 依次使用 $1 times 1$ 卷积将通道数由 96 降至 48、LeakyReLU、$3 times 3$ 卷积、LeakyReLU 和最终的 $3 times 3$ 卷积，预测三通道 HVI 空间残差：
+*HVI 空间残差重建与模型配置。*尾部将浅层特征 $bold(F)_0$ 与调制特征 $bold(F)_m$ 在通道维拼接，形成 $B times 96 times H times W$ 的融合输入。$phi_t$ 依次使用 $1 times 1$ 卷积将通道数由 96 降至 48、LeakyReLU、$3 times 3$ 卷积、LeakyReLU 和最终的 $3 times 3$ 卷积，预测三通道 HVI 空间残差：
 
 $ bold(R)_("hvi") = phi_t ([bold(F)_0, bold(F)_m]), quad hat(bold(Z)) = bold(Z) + bold(R)_("hvi"). $
 
@@ -132,9 +119,7 @@ $ bold(R)_("hvi") = phi_t ([bold(F)_0, bold(F)_m]), quad hat(bold(Z)) = bold(Z) 
 
 本章将标准卷积配置统一记为 $L^3$-AgriUAVNet：深度 $D = 2$、宽度 $C = 48$、蒸馏比为 0.25，启用 ESA 和 GMod，参数量约为 0.139 M。其 DWConv 变体统一记为 $L^3$-AgriUAVNet-DW，使用相同的深度、宽度和模块配置，但以深度可分离卷积替换 RFDN-S 细化路径中的标准卷积，参数量约为 0.07 M。两种卷积配置的定量比较在结果部分单独报告。
 
-==== 与邻近架构的关系
-
-@tab:l3_arch_relation 从表征路径、局部主干和全局调节三个维度比较 $L^3$-AgriUAVNet 与其直接技术来源及邻近轻量模型。HVI-CIDNet 提供 HVI 表征，但采用强度–色彩双分支和跨注意力交互；标准 RFDN/RFDB 提供逐级特征蒸馏与 ESA，并在 RGB 特征上使用较宽的连续细化路径、多块输出融合和恢复头；SCI 则代表极轻量的照明估计路线。$L^3$-AgriUAVNet 将 HVI 表征与特征蒸馏重组为单流路径，以两个浅层块和一次自条件全局调制完成特征提取，并通过 HVI 空间残差重建输出增强结果。这种组织方式构成了面向农业 UAV 参数预算的集成创新。
+*与邻近架构的关系。*@tab:l3_arch_relation 从表征路径、局部主干和全局调节三个维度比较 $L^3$-AgriUAVNet 与其直接技术来源及邻近轻量模型。HVI-CIDNet 提供 HVI 表征，但采用强度–色彩双分支和跨注意力交互；标准 RFDN/RFDB 提供逐级特征蒸馏与 ESA，并在 RGB 特征上使用较宽的连续细化路径、多块输出融合和恢复头；SCI 则代表极轻量的照明估计路线。$L^3$-AgriUAVNet 将 HVI 表征与特征蒸馏重组为单流路径，以两个浅层块和一次自条件全局调制完成特征提取，并通过 HVI 空间残差重建输出增强结果。这种组织方式构成了面向农业 UAV 参数预算的集成创新。
 
 #figure(
   three-line-table(table(
@@ -353,8 +338,6 @@ Tenengrad 从 33.16 提高至 102.87，边缘密度和局部对比度也同步�
 
 下游检测作为同一玉米苗低光数据集上的第二种评价路径，用于考察增强表征的农业应用价值。@fig:l3_res_task 展示了有代表性的 YOLOv8n 检测示例及汇总比较。按照实验设置中的统一协议，YOLOv8n@jocher2023yolov8 分别在 Raw、$L^3$-AgriUAVNet、RFDN、LLFormer 和 Retinexformer 输入分布上训练与测试。
 
-==== YOLOv8n：轻量检测器
-
 #figure(
   three-line-table(table(
     columns: 5,
@@ -371,9 +354,7 @@ Tenengrad 从 33.16 提高至 102.87，边缘密度和局部对比度也同步�
   kind: table,
 ) <tab:l3_yolov8n>
 
-@tab:l3_yolov8n 显示，$L^3$-AgriUAVNet 将 mAP\@0.5 从 Raw 的 0.1393 提高至 0.1596，相对增幅为 14.6%；Precision 由 0.2984 提高至 0.3139，Recall 则由 0.2257 变为 0.2065，呈现精度–召回率权衡。RFDN 的 mAP\@0.5 为 0.1646，略高于 $L^3$-AgriUAVNet，但其参数量和 MACs 分别约为后者的 2.7 和 2.8 倍。$L^3$-AgriUAVNet 因而在极低增强预算下保持了接近 RFDN 的下游性能。LLFormer 虽具有最高的上游 PSNR，其 YOLOv8n mAP\@0.5 仅为 0.0601，说明重建指标与下游效用并不总是同步变化。
-
-==== YOLOv8s：高容量检测器
+*YOLOv8n：轻量检测器。*@tab:l3_yolov8n 显示，$L^3$-AgriUAVNet 将 mAP\@0.5 从 Raw 的 0.1393 提高至 0.1596，相对增幅为 14.6%；Precision 由 0.2984 提高至 0.3139，Recall 则由 0.2257 变为 0.2065，呈现精度–召回率权衡。RFDN 的 mAP\@0.5 为 0.1646，略高于 $L^3$-AgriUAVNet，但其参数量和 MACs 分别约为后者的 2.7 和 2.8 倍。$L^3$-AgriUAVNet 因而在极低增强预算下保持了接近 RFDN 的下游性能。LLFormer 虽具有最高的上游 PSNR，其 YOLOv8n mAP\@0.5 仅为 0.0601，说明重建指标与下游效用并不总是同步变化。
 
 #figure(
   three-line-table(table(
@@ -391,11 +372,9 @@ Tenengrad 从 33.16 提高至 102.87，边缘密度和局部对比度也同步�
   kind: table,
 ) <tab:l3_yolov8s>
 
-@tab:l3_yolov8s 显示，Raw 输入的 mAP\@0.5 为 0.3574，$L^3$-AgriUAVNet、RFDN、LLFormer 和 Retinexformer 分别为 0.3338、0.3328、0.3370 和 0.3382，呈现出与 YOLOv8n 不同的响应模式。检测器容量及其特征提取能力可能改变预增强的边际收益，这一关系将在重复训练和更多检测架构中继续验证。
+*YOLOv8s：高容量检测器。*@tab:l3_yolov8s 显示，Raw 输入的 mAP\@0.5 为 0.3574，$L^3$-AgriUAVNet、RFDN、LLFormer 和 Retinexformer 分别为 0.3338、0.3328、0.3370 和 0.3382，呈现出与 YOLOv8n 不同的响应模式。检测器容量及其特征提取能力可能改变预增强的边际收益，这一关系将在重复训练和更多检测架构中继续验证。
 
-==== 结果小结
-
-低光增强会同时改变检测器的输入分布和任务表现。$L^3$-AgriUAVNet 以显著低于 RFDN 的增强预算取得接近的 YOLOv8n mAP，并相对 Raw 提高 mAP 和 Precision，将上游的质量–效率优势延伸至轻量检测场景。不同容量检测器的响应差异则表明，增强器与检测器之间存在联合选择与联合优化的空间。
+综合上述结果，低光增强会同时改变检测器的输入分布和任务表现。$L^3$-AgriUAVNet 以显著低于 RFDN 的增强预算取得接近的 YOLOv8n mAP，并相对 Raw 提高 mAP 和 Precision，将上游的质量–效率优势延伸至轻量检测场景。不同容量检测器的响应差异则表明，增强器与检测器之间存在联合选择与联合优化的空间。
 
 == 讨论
 
