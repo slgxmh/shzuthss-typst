@@ -71,7 +71,7 @@ ExG 通过强调绿色通道相对红蓝通道的优势响应，常用于农业�
 
 == 基于 RGB 像素向量的传统分类基线
 
-对于固定航点采集的 140 个样本，首先从每幅影像中心裁剪 $224 times 224$ 像素区域，再按固定顺序将 RGB 三通道像素值展开为长度为 $224 times 224 times 3 = 150528$ 的一维向量。该输入不包含前述 ROI、光谱指数、形态或纹理特征。对比模型包括 PCA + Logistic Regression（PCA+LR）、标准 Random Forest（RF）和类别均衡 Random Forest（Balanced RF）。PCA+LR 用于验证降维后线性判别子空间的可行性，RF 用于评估非线性集成分类器对 RGB 像素向量的拟合能力，Balanced RF 用于考察类别均衡策略对长尾等级识别的影响。
+首先从每幅影像中心裁剪 $224 times 224$ 像素区域，再按固定顺序将 RGB 三通道像素值展开为长度为 $224 times 224 times 3 = 150528$ 的一维向量。该输入不包含前述 ROI、光谱指数、形态或纹理特征。对比模型包括 PCA + Logistic Regression（PCA+LR）、标准 Random Forest（RF）和类别均衡 Random Forest（Balanced RF）。PCA+LR 用于验证降维后线性判别子空间的可行性，RF 用于评估非线性集成分类器对 RGB 像素向量的拟合能力，Balanced RF 用于考察类别均衡策略对长尾等级识别的影响。
 
 === 算法流程
 
