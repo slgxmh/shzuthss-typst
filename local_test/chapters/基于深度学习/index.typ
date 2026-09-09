@@ -62,7 +62,7 @@ RTCMNet 通过共享骨干和两个任务分类头同时预测脱叶率与吐絮
 本研究将 RTCMNet 与 DenseNet-121、MobileNetV2、ResNet-18、ShuffleNetV2 和 EfficientNet 进行比较。评价内容包括识别准确率、模型规模、计算量和端侧推理速度。
 在本次实验中，模型训练在 Windows 平台上完成，PyTorch 版本为 2.5.1，TorchVision 版本为 0.20.1，ONNX 版本为 1.17.0。移动端测试在大疆遥控器上完成，型号为 DJI RC Pro Enterprise，其搭载 Android 10 系统。
 
-模型性能采用固定随机种子的五折交叉验证进行评价。全部样本在固定随机种子下随机打乱并划分为五个互斥子集；每轮使用其中一折作为测试集，其余四折作为训练集，不另设独立验证集，直至每一折均作为测试集一次。每一折分别计算脱叶率与吐絮率任务的 Accuracy、Macro-Precision、Macro-Recall 和 Macro-F1，再对两个任务的对应指标取算术平均。最终结果以五折双任务平均指标的均值 $plus.minus$ 标准差表示。训练过程中不使用测试折进行最优检查点选择或超参数调整。
+模型性能采用固定随机种子的五折交叉验证进行评价。全部样本在固定随机种子下随机打乱并划分为五个互斥子集；每轮使用其中一折作为测试集，其余四折作为训练集，不另设独立验证集，直至每一折均作为测试集一次。每一折分别计算脱叶率与吐絮率任务的准确率、宏平均精确率、宏平均召回率和 Macro-F1，再对两个任务的对应指标取算术平均。最终结果以五折双任务平均指标的均值 $plus.minus$ 标准差表示。训练过程中不使用测试折进行最优检查点选择或超参数调整。
 
 本章与第 2 章均以图像块为评价单位，但这里采用五折交叉验证。对比模型使用相同的折索引、输入、训练配置和指标，比较目标作业域内不同网络的性能与部署代价。
 
@@ -78,9 +78,9 @@ $ cal(L)_"total" = cal(L)_"DE" + cal(L)_"BA". $
 
 === 评价方案
 
-脱叶率与吐絮率分别为 8 类和 6 类单标签多分类任务，因此本研究基于混淆矩阵定义评价指标。设任务 $t in {"DE", "BA"}$ 的类别数为 $K_t$，混淆矩阵 $C^t$ 中的元素 $C_(i j)^t$ 表示真实类别为 $i$、预测类别为 $j$ 的样本数，则任务 $t$ 的准确率定义为
+脱叶率与吐絮率分别为 8 类和 6 类单标签多分类任务，因此本研究基于混淆矩阵定义评价指标。设任务 $t in {"DE", "BA"}$ 的类别数为 $K_t$，混淆矩阵 $C^t$ 中的元素 $C_(i j)^t$ 表示真实类别为 $i$、预测类别为 $j$ 的样本数，则任务 $t$ 的准确率 $A_t$ 定义为
 
-$ text("Accuracy")_t = frac(sum_(k=1)^(K_t) C_(k k)^t, sum_(i=1)^(K_t) sum_(j=1)^(K_t) C_(i j)^t). $ <eq_acc>
+$ A_t = frac(sum_(k=1)^(K_t) C_(k k)^t, sum_(i=1)^(K_t) sum_(j=1)^(K_t) C_(i j)^t). $ <eq_acc>
 
 对第 $k$ 类，其精确率、召回率和 F1 分数分别定义为
 
@@ -88,17 +88,17 @@ $ P_(t,k) = frac(C_(k k)^t, sum_(i=1)^(K_t) C_(i k)^t), quad R_(t,k) = frac(C_(k
 
 $ "F1"_(t,k) = frac(2 P_(t,k) R_(t,k), P_(t,k) + R_(t,k)). $ <eq_f1>
 
-为降低类别不均衡对总体指标的掩盖，本研究在每个任务内部对各类别等权平均：
+为降低类别不均衡对总体指标的掩盖，本研究在每个任务内部对各类别等权平均，得到宏平均精确率 $P_t$、宏平均召回率 $R_t$ 与 Macro-F1：
 
-$ text("Macro-Precision")_t = frac(1, K_t) sum_(k=1)^(K_t) P_(t,k), quad text("Macro-Recall")_t = frac(1, K_t) sum_(k=1)^(K_t) R_(t,k), $ <eq_recall>
+$ P_t = frac(1, K_t) sum_(k=1)^(K_t) P_(t,k), quad R_t = frac(1, K_t) sum_(k=1)^(K_t) R_(t,k), $ <eq_recall>
 
-$ text("Macro-F1")_t = frac(1, K_t) sum_(k=1)^(K_t) "F1"_(t,k). $
+$ "F1"_t = frac(1, K_t) sum_(k=1)^(K_t) "F1"_(t,k). $
 
-综合性能表中的 Accuracy、Precision、Recall 与 F1 均为脱叶率和吐絮率两项任务对应指标的算术平均。对于任一指标 $M$，双任务平均值定义为
+综合性能表中的准确率、精确率、召回率与 F1 均为脱叶率和吐絮率两项任务对应指标的算术平均。对于任一指标 $M$，双任务平均值定义为
 
 $ M_("avg") = frac(M_("DE") + M_("BA"), 2). $
 
-Precision、Recall 和 F1 均先在各任务内部按类别进行宏平均，再对两项任务取平均。由于多数样本集中在若干中间等级，Accuracy 可能掩盖模型对少数类和边界类的识别不足。因此，本研究同时报告 Macro-Precision、Macro-Recall 与 Macro-F1。
+精确率、召回率和 F1 均先在各任务内部按类别进行宏平均，再对两项任务取平均。由于多数样本集中在若干中间等级，准确率可能掩盖模型对少数类和边界类的识别不足。因此，本研究同时报告宏平均精确率、宏平均召回率与 Macro-F1。
 
 为了分析模型在端侧部署中的资源消耗，本研究将参数数量、计算复杂度（以 GMACs 计）以及 PC 端与移动端推理时间一并纳入评估。MACs（multiply–accumulate operations）表示一次前向推理中乘加运算的数量，GMACs 为其十亿量级表示，用于度量模型计算复杂度。在卷积神经网络（CNN）中，标准卷积层的 MACs 可通过以下公式计算：
 
@@ -126,23 +126,23 @@ $ text("GMACs") = frac(text("MACs")_("total"), 10^9) $
     set text(size: 7.5pt)
     three-line-table(all_metrics)
   },
-  caption: [不同模型在脱叶率与吐絮率双任务上的综合性能。Accuracy、F1、Precision 和 Recall 为每折两项任务对应指标的算术平均，表中报告五折交叉验证的均值 $plus.minus$ 标准差；参数量、MACs 和推理时间为确定性部署指标。],
+  caption: [不同模型在脱叶率与吐絮率双任务上的综合性能。准确率、F1、精确率和召回率为每折两项任务对应指标的算术平均，表中报告五折交叉验证的均值 $plus.minus$ 标准差；参数量、MACs 和推理时间为确定性部署指标。],
 )<allmetric>
 
-在五折交叉验证中，DenseNet-121 的经典模型组表现最好（@allmetric）：双任务平均 Accuracy 和 Macro-F1 均为 $0.94 plus.minus 0.01$，Macro-Precision 为 $0.95 plus.minus 0.01$，Macro-Recall 为 $0.94 plus.minus 0.01$。ResNet-18 的 Accuracy 为 $0.89 plus.minus 0.04$、Macro-Precision 为 $0.91 plus.minus 0.04$；InceptionV3 与 ViT-S 的 Accuracy 分别为 $0.79 plus.minus 0.04$ 和 $0.77 plus.minus 0.04$。
+在五折交叉验证中，DenseNet-121 的经典模型组表现最好（@allmetric）：双任务平均准确率和 Macro-F1 均为 $0.94 plus.minus 0.01$，宏平均精确率为 $0.95 plus.minus 0.01$，宏平均召回率为 $0.94 plus.minus 0.01$。ResNet-18 的准确率为 $0.89 plus.minus 0.04$、宏平均精确率为 $0.91 plus.minus 0.04$；InceptionV3 与 ViT-S 的准确率分别为 $0.79 plus.minus 0.04$ 和 $0.77 plus.minus 0.04$。
 
-在轻量级模型方面，ShuffleNetV2 的 Accuracy 和 Macro-F1 均为 $0.92 plus.minus 0.02$，Macro-Precision 为 $0.93 plus.minus 0.02$，表现出较强的识别性能。EfficientNet 的 Accuracy 为 $0.88 plus.minus 0.04$，LeViT-128 为 $0.86 plus.minus 0.05$。MobileNetV2 与 MobileNetV3-Small 的 Accuracy 分别为 $0.74 plus.minus 0.01$ 和 $0.13 plus.minus 0.00$，表明不同轻量结构在当前任务上的表现差异较大；这些结果仅反映统一实验协议下的经验差异，不将单一模型的低分直接归因于轻量化程度。
+在轻量级模型方面，ShuffleNetV2 的准确率和 Macro-F1 均为 $0.92 plus.minus 0.02$，宏平均精确率为 $0.93 plus.minus 0.02$，表现出较强的识别性能。EfficientNet 的准确率为 $0.88 plus.minus 0.04$，LeViT-128 为 $0.86 plus.minus 0.05$。MobileNetV2 与 MobileNetV3-Small 的准确率分别为 $0.74 plus.minus 0.01$ 和 $0.13 plus.minus 0.00$，表明不同轻量结构在当前任务上的表现差异较大；这些结果仅反映统一实验协议下的经验差异，不将单一模型的低分直接归因于轻量化程度。
 
-RTCMNet 的 Accuracy、Macro-F1、Macro-Precision 和 Macro-Recall 均为 $0.93 plus.minus 0.02$，与性能最高的 DenseNet-121 接近，并高于当前实验中的 SCTNet（Accuracy 为 $0.86 plus.minus 0.13$）。最终采用的 RTCMNetB1 含 0.37 M 参数、0.19 GMACs，在保持较高双任务平均性能的同时显著降低了模型规模和计算开销，体现出面向资源受限设备的精度–效率权衡。
+RTCMNet 的准确率、Macro-F1、宏平均精确率和宏平均召回率均为 $0.93 plus.minus 0.02$，与性能最高的 DenseNet-121 接近，并高于当前实验中的 SCTNet（准确率为 $0.86 plus.minus 0.13$）。最终采用的 RTCMNetB1 含 0.37 M 参数、0.19 GMACs，在保持较高双任务平均性能的同时显著降低了模型规模和计算开销，体现出面向资源受限设备的精度–效率权衡。
 
 #figure(
   block(image("model_params.png")),
   caption: "模型参数量、识别性能与推理时间对比。（a）准确率、参数量与推理时间之间的关系；（b）DJI 遥控器平台上的推理时间。",
 )<model_params>
 
-如@model_params 所示，本研究构建的 RTCMNet 在分类性能与运算效率之间实现了较好的平衡。DenseNet-121 的参数量为 6.63 M，移动端推理时间为 1084 ms；最终采用的 RTCMNetB1 仅需 0.37 M 参数，约为 DenseNet-121 的 5.6%，双任务平均 Accuracy 为 $0.93 plus.minus 0.02$，与 DenseNet-121 的 $0.94 plus.minus 0.01$ 接近，且在 DJI 遥控器上的推理时延仅为 32 ms。
+如@model_params 所示，本研究构建的 RTCMNet 在分类性能与运算效率之间实现了较好的平衡。DenseNet-121 的参数量为 6.63 M，移动端推理时间为 1084 ms；最终采用的 RTCMNetB1 仅需 0.37 M 参数，约为 DenseNet-121 的 5.6%，双任务平均准确率为 $0.93 plus.minus 0.02$，与 DenseNet-121 的 $0.94 plus.minus 0.01$ 接近，且在 DJI 遥控器上的推理时延仅为 32 ms。
 
-与 MobileNetV2 相比，RTCMNet 参数量更小、GMACs 更低，推理时间由 62 ms 降至 32 ms，双任务平均 Accuracy 则由 $0.74 plus.minus 0.01$ 提高至 $0.93 plus.minus 0.02$。MobileNetV3-Small 虽具有较低推理时延，但其 Accuracy 为 $0.13 plus.minus 0.00$；这一结果说明具体轻量结构与训练任务之间的适配性需要结合精度和部署指标共同评价。
+与 MobileNetV2 相比，RTCMNet 参数量更小、GMACs 更低，推理时间由 62 ms 降至 32 ms，双任务平均准确率则由 $0.74 plus.minus 0.01$ 提高至 $0.93 plus.minus 0.02$。MobileNetV3-Small 虽具有较低推理时延，但其准确率为 $0.13 plus.minus 0.00$；这一结果说明具体轻量结构与训练任务之间的适配性需要结合精度和部署指标共同评价。
 ShuffleNetV2 与 EfficientNet 也表现出较好的准确率和较快的推理速度，但它们的参数量明显高于 RTCMNet：ShuffleNetV2 的参数量为 5.10 M，约为 RTCMNetB1（0.37 M）的 13.8 倍，EfficientNet 则约为 3.82 M。在计算资源受限的无人机等边缘设备中，更大的模型规模会增加存储与部署成本，不利于灵活集成。
 如@model_params (b) 所示，RTCMNet 在 DJI 遥控器上的推理时延低于 SCTNet 等轻量网络，表明其能够满足当前设备上的低时延推理需求。该结果为脱叶率与吐絮率的现场快速识别提供了设备端依据。
 
@@ -155,7 +155,7 @@ ShuffleNetV2 与 EfficientNet 也表现出较好的准确率和较快的推理�
   caption: "不同模型的脱叶率等级分类结果。",
 )<defaliation_res>
 
-@defaliation_res 给出了不同模型在脱叶率等级分类任务上的 Accuracy、Precision、Recall 和 F1；其数据处理和评价协议与吐絮率任务一致。
+@defaliation_res 给出了不同模型在脱叶率等级分类任务上的准确率、精确率、召回率和 F1；其数据处理和评价协议与吐絮率任务一致。
 DenseNet-121 在脱叶率任务上的准确率、精确率、召回率和 F1 均为 0.95。ShuffleNetV2 与 ResNet-18 的结果较为接近，前者略高。
 ShuffleNetV2 在轻量模型中表现较好，以小于部分经典模型的规模获得较高分类指标。
 EfficientNet 和 SqueezeNet 的指标低于 ShuffleNetV2；MobileNetV3-Small 的准确率仅为 0.13。该结果说明这一模型在当前训练协议下未能有效完成分类，其原因还需结合训练过程检查，不能仅由参数量解释。
@@ -172,11 +172,11 @@ RTCMNet 的综合指标优于多数轻量基线，而模型规模显著小于 De
   caption: "不同模型的吐絮率等级分类结果。",
 )<boll_opeening_res>
 
-@boll_opeening_res 给出了不同模型在吐絮率等级分类任务上的 Accuracy、Precision、Recall 和 F1。DenseNet-121 的四项指标最高；RTCMNet 的综合表现仅次于 DenseNet-121，并优于大部分轻量模型，其 Precision 优势较为明显。
+@boll_opeening_res 给出了不同模型在吐絮率等级分类任务上的准确率、精确率、召回率和 F1。DenseNet-121 的四项指标最高；RTCMNet 的综合表现仅次于 DenseNet-121，并优于大部分轻量模型，其精确率优势较为明显。
 
 吐絮率等级主要由白絮暴露比例、铃壳开裂状态和冠层遮挡关系等视觉线索共同决定，背景高亮区域和尺度变化可能造成干扰。RTCMNet 的结果与其多尺度特征设计相一致，但各模块的具体贡献仍以消融实验为依据。
 
-较高的宏平均 Precision 表明各等级预测具有较好的平均精确性。若要据此筛选接近采收条件的区域，还需单独检查高吐絮等级的误报，并结合现场复核判断。
+较高的宏平均精确率表明各等级预测具有较好的平均精确性。若要据此筛选接近采收条件的区域，还需单独检查高吐絮等级的误报，并结合现场复核判断。
 
 === 消融实验
 
@@ -187,7 +187,7 @@ RTCMNet 的综合指标优于多数轻量基线，而模型规模显著小于 De
 
 为分析注意力类型和网络规模的影响，本研究以 Conv-Former Block@xu2024sctnet 替换 MSCA Block，并调整层数与头数。@ablation_study 比较了各配置的准确率、端侧时延和计算量。
 
-采用 CF、层配置为 1,1,1、头数为 8 时，模型 Accuracy 为 0.89，端侧时延为 22 ms，计算量为 0.37 GMACs。将 CF 配置扩展至 1,2,2 和 16 头后，Accuracy 仅升至 0.90，时延和计算量则分别增至 205 ms 和 6.75 GMACs。采用 MSCA 后，1,1,1 配置的 Accuracy 为 0.91，时延为 29 ms，计算量为 0.16 GMACs；1,2,2 和 8 头配置的 Accuracy 进一步达到 0.942，时延为 31 ms，计算量为 0.19 GMACs。继续增加至 16 头后，Accuracy 降至 0.92，而时延和计算量分别增至 113 ms 和 0.68 GMACs。综合上述结果，最终选用 1,2,2 和 8 头的 RTCMNetB1。
+采用 CF、层配置为 1,1,1、头数为 8 时，模型准确率为 0.89，端侧时延为 22 ms，计算量为 0.37 GMACs。将 CF 配置扩展至 1,2,2 和 16 头后，准确率仅升至 0.90，时延和计算量则分别增至 205 ms 和 6.75 GMACs。采用 MSCA 后，1,1,1 配置的准确率为 0.91，时延为 29 ms，计算量为 0.16 GMACs；1,2,2 和 8 头配置的准确率进一步达到 0.942，时延为 31 ms，计算量为 0.19 GMACs。继续增加至 16 头后，准确率降至 0.92，而时延和计算量分别增至 113 ms 和 0.68 GMACs。综合上述结果，最终选用 1,2,2 和 8 头的 RTCMNetB1。
 
 消融结果显示，扩大层数和头数并未带来持续的准确率提升，却明显增加了端侧时延和计算量。RTCMNetB1 因而构成当前实验中较合适的精度—效率折中配置，与移动端部署目标一致。
 

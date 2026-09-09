@@ -1,7 +1,7 @@
 #let all_metrics = table(
   columns: (4%, 17%, 12%, 12%, 12%, 12%, 10%, 9%, 12%),
   column-gutter: 2pt,
-  table.header([], [Backbone], [Accuracy], [F1], [Precision], [Recall], [Params (M)], [MACs (G)], [Time (ms)]),
+  table.header([], [Backbone], [准确率], [F1], [精确率], [召回率], [Params (M)], [MACs (G)], [Time (ms)]),
   table.cell(rowspan: 4, align: horizon, rotate(-90deg, reflow: true)[
     经典模型
   ]),
@@ -28,7 +28,7 @@
 
 #let ablation_study = table(
   columns: 6,
-  [层配置], [注意力], [头数], [Accuracy], [Time (ms)], [MACs (G)],
+  [层配置], [注意力], [头数], [准确率], [Time (ms)], [MACs (G)],
   [1,1,1], [CF], [8], [0.89], [22], [0.37],
   [1,2,2], [CF], [16], [0.90], [205], [6.75],
   [1,1,1], [MSCA], [8], [0.91], [29], [0.16],
