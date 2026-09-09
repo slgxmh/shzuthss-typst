@@ -59,7 +59,7 @@
   let actual_loc = if location == none { here() } else { location }
   if appendixcounter.at(actual_loc).first() < 10 {
     if nums.pos().len() == 1 {
-      "第" + chinesenumber(nums.pos().first()) + "章"
+      "第" + str(nums.pos().first()) + "章"
     } else {
       numbering(if brackets { "(1.1)" } else { "1.1" }, ..nums)
     }

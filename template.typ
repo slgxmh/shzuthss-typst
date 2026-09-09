@@ -144,7 +144,7 @@
   // ========== 页面设置 ==========
   set page(
     "a4",
-    margin: (top: 3cm, bottom: 2.5cm, left: 2.6cm, right: 2.6cm),
+    margin: (top: 3cm, bottom: 2.5cm, left: 2.5cm, right: 2.5cm),
     header: styles.make-header(cheader: cheader),
     footer: styles.make-footer(),
   )
@@ -300,11 +300,14 @@
 
   // ========== 正文 ==========
   set align(left + top)
+  // 12pt 字面高度 + 8pt 行间空白 = 20pt 基线间距。
+  // spacing 与 leading 相同，使段间延续正常行距，无额外段前段后空白。
+  set text(top-edge: 0.8em, bottom-edge: -0.2em)
   set par(
     justify: true,
     first-line-indent: (amount: first-line-indent, all: true),
-    leading: 10.5pt,
-    spacing: 10.5pt,
+    leading: 8pt,
+    spacing: 8pt,
   )
 
   let use-gb7714 = not override-bib and bibcontent != none

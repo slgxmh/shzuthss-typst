@@ -8,8 +8,8 @@
 )
 #import "utils.typ": chinesenumbering
 
-#let default-heading-spacing-before = (17pt, 24pt, 12pt, 6pt)
-#let default-heading-spacing-after = (16.5pt, 6pt, 6pt, 6pt)
+#let default-heading-spacing-before = (30pt, 18pt, 12pt, 6pt)
+#let default-heading-spacing-after = (30pt, 18pt, 12pt, 6pt)
 #let sym-box-unchecked(size) = box(width: size, align(
   center + horizon,
   square(size: size),
@@ -111,12 +111,12 @@
 
   let header-gap = 3pt
 
-  set text(字号.五号)
+  set text(字号.五号, top-edge: 0.8em, bottom-edge: -0.2em)
   set par(spacing: 0pt)
   set align(center)
 
   // 对应 Word 模板中页眉上边距
-  place(top + center, dy: 2cm)[
+  place(top + center, dy: 23mm)[
     #block(width: 100%)[
       #stack(
         dir: ttb,
@@ -165,7 +165,7 @@
       and query(selector(<__clean_declaration__>)).len() > 0
   ) { return }
 
-  set text(字号.页码)
+  set text(字号.页码, top-edge: 0.8em, bottom-edge: -0.2em)
   set align(center)
 
   let page-num = counter(page).at(here()).first()
@@ -178,7 +178,7 @@
       str(page-num)
     }
     // 对应 Word 模板中页脚下边距
-    #v(1.75cm)
+    #v(15mm)
   ]
 }
 
@@ -201,7 +201,7 @@
   // 如果 heading 内容为空，跳过渲染
   if it.body == none or it.body == [] { return }
 
-  // Word 模板中默认标题的段前间距为 17pt，段后间距为 16.5pt
+  // 标题段前、段后空白按级别设置。
   let spacing-before = meta.at(
     "spacing-before",
     default: default-heading-spacing-before.at(calc.min(it.level - 1, 3)),
@@ -210,9 +210,9 @@
     "spacing-after",
     default: default-heading-spacing-after.at(calc.min(it.level - 1, 3)),
   )
-  // Word 模板中默认标题的行距为 2.41 倍行距
-  // 在黑体三号字情况下，对应行距为 16pt * 1.3 * 2.41
-  let linespacing = meta.at("linespacing", default: 字号.三号 * 1.3 * 2.41)
+  // 显式应用字号，避免继承 Typst 默认标题缩放。
+  set text(size: size, font: 字体.黑体, top-edge: 0.8em, bottom-edge: -0.2em)
+  let linespacing = meta.at("linespacing", default: 20pt)
   let font = meta.at("font", default: (:))
 
   // 清除 Typst 标题自带的前后间距
@@ -283,7 +283,7 @@
 
   // 4. 渲染
   set align(center)
-  sizedheading(it, 字号.三号, ..meta)
+  sizedheading(it, 字号.一级标题, ..meta)
 }
 
 // figure 样式规则

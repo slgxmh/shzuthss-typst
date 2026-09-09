@@ -208,11 +208,9 @@
   first-line-indent: 2em,
   cabstract,
 ) = {
-  // Word 模板中默认为 20pt 行距
-  // 调整 text(top-edge:, bottom-edge:) 的方式可以更完美地匹配行距
-  // 但是会导致列表编号和列表内容无法对齐
-  // 这里选择基于经验的配置
-  set par(leading: 10.5pt, spacing: 10.5pt, justify: true)
+  // 固定 20pt 行距，段间无额外空白。
+  set text(top-edge: 0.8em, bottom-edge: -0.2em)
+  set par(leading: 8pt, spacing: 8pt, justify: true)
   front-heading("摘要", enter-front: true, header: "摘要")
   set par(first-line-indent: first-line-indent)
   cabstract
@@ -242,16 +240,16 @@
       pagebreak: true,
       show-header: true,
       header: "ABSTRACT",
-      spacing-before: 24pt,
-      spacing-after: 8pt,
-      linespacing: 2em,
-      font: (size: 字号.小二, font: "Arial", weight: "regular"),
+      spacing-before: 30pt,
+      spacing-after: 30pt,
+      linespacing: 20pt,
+      font: (size: 字号.小三, font: "Times New Roman", weight: "bold"),
     ))],
   )[#upper(etitle)]
 
-  // Word 模板中正文仍然是 20pt 行距
-  // 对于纯英文字体，测试下来 12.5pt 的匹配效果较好
-  set par(spacing: 12.5pt, leading: 12.5pt, justify: true)
+  // 固定 20pt 行距，段间无额外空白。
+  set text(top-edge: 0.8em, bottom-edge: -0.2em)
+  set par(spacing: 8pt, leading: 8pt, justify: true)
   if not blind {
     [
       #set align(center)
@@ -260,9 +258,9 @@
     ]
   }
   // Word 模板中英文摘要的首行缩进固定为 0.74cm
-  set par(first-line-indent: 0.74cm, justify: true)
+  set par(first-line-indent: (amount: 2em, all: true), justify: true)
   v(8pt)
-  align(center)[#text(font: "Arial", weight: "bold")[ABSTRACT]]
+  align(center)[#text(font: "Times New Roman", weight: "bold")[ABSTRACT]]
   v(6pt)
   eabstract
   v(1fr)
@@ -281,8 +279,8 @@
   back-heading("致谢")
   set par(
     first-line-indent: first-line-indent,
-    leading: 10.5pt,
-    spacing: 10.5pt,
+    leading: 8pt,
+    spacing: 8pt,
   )
   acknowledgements
 }
