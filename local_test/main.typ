@@ -53,7 +53,7 @@
 
 #include "chapters/光谱指数/index.typ"
 
-= 面向农业大田场景的轻量级低光增强模型研究 <chap:lowlight>
+= 面向农业大田场景的低光增强模型研究 <chap:lowlight>
 
 #include "chapters/低光合成/index.typ"
 
