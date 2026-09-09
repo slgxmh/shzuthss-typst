@@ -53,15 +53,15 @@
 
 #include "chapters/光谱指数/index.typ"
 
-= 基于深度学习的轻量级脱叶率与吐絮率识别
-
-#include "chapters/基于深度学习/index.typ"
-
 = 面向农业大田场景的轻量级低光增强模型研究
 
 #include "chapters/低光合成/index.typ"
 
 #include "chapters/多光照/index.typ"
+
+= 基于深度学习的轻量级脱叶率与吐絮率识别
+
+#include "chapters/基于深度学习/index.typ"
 
 = 大田场景下的脱叶率与吐絮率识别
 
