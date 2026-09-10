@@ -75,7 +75,7 @@
 随着人工智能技术的发展，深度视觉方法已广泛用于病虫害检测、作物监测和收获判断，并表型任务中展现出较好的特征学习能力@jafar2024revolutionizing @stephen2024efficient @abdalla2024assessing @upadhyay2025deep @akbar2024comprehensive。与依赖固定颜色或光谱统计的路线相比，端到端模型能够联合利用局部纹理、冠层结构和上下文信息，为复杂背景下的双指标联合识别提供方法基础。
 
 #figure(
-  image("conv_flow.png"),
+  image("conv_flow_redrawn.svg", width: 100%),
   caption: [基于卷积神经网络的农作物表型检测与识别流程],
 ) <fig:conv_flow>
 
