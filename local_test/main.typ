@@ -59,7 +59,7 @@
 
 #include "chapters/多光照/index.typ"
 
-= 基于深度学习脱叶率与吐絮率识别
+= 基于深度学习的脱叶率与吐絮率识别
 
 #include "chapters/基于深度学习/index.typ"
 
