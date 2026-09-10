@@ -23,7 +23,7 @@
   caption: "RGB 像素向量的 PCA 与随机森林分类流程。",
 ) <fig:ch3-rgb-ml-flow>
 
-PCA+LR 分支由 StandardScaler、256 维 PCA 和 Logistic Regression 串联构成；RF 则直接接收 RGB 像素向量。两个模型分别针对脱叶率和吐絮率标签进行训练，并在统一数据划分下计算准确率与 Macro-F1。本节报告一次固定划分的结果，用于比较当前条件下的分类器表现；其稳定性还需通过多随机种子重复实验及跨地块、跨时段测试评价。
+PCA+LR 分支由 StandardScaler、256 维 PCA 和 Logistic Regression 串联构成；RF 则直接接收 RGB 像素向量。两个模型分别针对脱叶率和吐絮率标签进行训练，并在统一数据划分下计算准确率与 Macro-F1。本节报告一次固定划分的结果，用于比较当前条件下的分类器表现。
 
 === 分类结果与问题分析
 
