@@ -12,8 +12,8 @@
 #v(2mm)
 #grid(columns: (1fr, 1fr), column-gutter: 3mm, row-gutter: 2mm,
  heading[棉花双指标识别数据], heading[农业低光增强数据],
- cell([石河子多时相棉田 UAV RGB 影像\ 人工脱叶率与吐絮率调查\ 航点与双指标等级标签关联], height: 20mm),
- cell([沙湾多作物正常曝光 UAV 影像\ 真实低光校准影像\ 源影像筛选与图像块制作], height: 20mm),
+ cell([石河子多时相棉田无人机 RGB 影像\ 人工脱叶率与吐絮率调查\ 航点与双指标等级标签关联], height: 20mm),
+ cell([沙湾多作物正常曝光无人机影像\ 真实低光校准影像\ 源影像筛选与图像块制作], height: 20mm),
 )
 #down
 #band[方法研究｜特征比较、低光适配与轻量识别]
