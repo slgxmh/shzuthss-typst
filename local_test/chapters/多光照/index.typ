@@ -321,7 +321,7 @@ $L^3$-AgriUAVNet 的参数量约为 LLFormer 的 1/42、Retinexformer 的 1/15 �
 
 Tenengrad 从 33.16 提高至 102.87，边缘密度和局部对比度也增大，说明增强后的梯度与纹理响应更强。由于锐化和噪声也可能提高这些值，结构保留情况仍需结合图像观察。$L^3$-AgriUAVNet 的 NIQE 为 8.43，略高于 Raw 的 8.15；LLFormer 和 Retinexformer 在部分指标上更优。NIQE 与 BRISQUE 的排序不同，宜结合@fig:l3_real 的视觉结果判断。
 
-=== 下游应用导向评价
+=== 模型性能验证
 
 #figure(
   image("fig7_detection_examples.png", width: 100%),

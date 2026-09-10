@@ -49,21 +49,21 @@
 
 #include "chapters/数据集/index.typ"
 
-= 基于可见光图像机器学习的脱叶率与吐絮率识别
+= 基于机器学习的脱叶率与吐絮率识别
 
 #include "chapters/光谱指数/index.typ"
 
-= 面向农业大田场景的低光增强模型研究 <chap:lowlight>
+= 面向开放场景的低光增强模型研究 <chap:lowlight>
 
 #include "chapters/低光合成/index.typ"
 
 #include "chapters/多光照/index.typ"
 
-= 基于深度学习的轻量级脱叶率与吐絮率识别
+= 基于深度学习脱叶率与吐絮率识别
 
 #include "chapters/基于深度学习/index.typ"
 
-= 大田场景下的脱叶率与吐絮率识别
+= 开放大田下的脱叶率与吐絮率监测
 
 #include "chapters/大田验证/index.typ"
 

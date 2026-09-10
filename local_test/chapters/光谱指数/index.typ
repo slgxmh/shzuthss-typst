@@ -1,4 +1,4 @@
-#import "../../../template.typ": three-line-table
+#import "../../../template.typ": three-line-table, codeblock
 
 == 引言
 
@@ -114,29 +114,29 @@ $ mu(Z) = frac(1,P) sum_(p=1)^P Z_p, quad sigma(Z) = sqrt(frac(1,P) sum_(p=1)^P 
 
 #figure(
   block(breakable: false, three-line-table(table(
-    columns: (0.5fr, 1.3fr, 1fr, 2fr),
-    table.header([序号], [通道或指数], [统计量], [程序字段名]),
-    [1], [红通道 $R$], [$mu(R)$], [`color_r_mean`],
-    [2], [红通道 $R$], [$sigma(R)$], [`color_r_std`],
-    [3], [绿通道 $G$], [$mu(G)$], [`color_g_mean`],
-    [4], [绿通道 $G$], [$sigma(G)$], [`color_g_std`],
-    [5], [蓝通道 $B$], [$mu(B)$], [`color_b_mean`],
-    [6], [蓝通道 $B$], [$sigma(B)$], [`color_b_std`],
-    [7], [ExG], [$mu("ExG")$], [`color_exg_mean`],
-    [8], [ExG], [$sigma("ExG")$], [`color_exg_std`],
-    [9], [ExG], [$Q_10("ExG")$], [`color_exg_p10`],
-    [10], [ExG], [$Q_50("ExG")$], [`color_exg_p50`],
-    [11], [ExG], [$Q_90("ExG")$], [`color_exg_p90`],
-    [12], [$D_("GR",3)$], [$mu(D_("GR",3))$], [`color_vari_mean`],
-    [13], [$D_("GR",3)$], [$sigma(D_("GR",3))$], [`color_vari_std`],
-    [14], [$D_("GR",3)$], [$Q_10(D_("GR",3))$], [`color_vari_p10`],
-    [15], [$D_("GR",3)$], [$Q_50(D_("GR",3))$], [`color_vari_p50`],
-    [16], [$D_("GR",3)$], [$Q_90(D_("GR",3))$], [`color_vari_p90`],
-    [17], [NGRDI], [$mu("NGRDI")$], [`color_ngrdi_mean`],
-    [18], [NGRDI], [$sigma("NGRDI")$], [`color_ngrdi_std`],
-    [19], [NGRDI], [$Q_10("NGRDI")$], [`color_ngrdi_p10`],
-    [20], [NGRDI], [$Q_50("NGRDI")$], [`color_ngrdi_p50`],
-    [21], [NGRDI], [$Q_90("NGRDI")$], [`color_ngrdi_p90`],
+    columns: (0.6fr, 1.4fr, 1.4fr),
+    table.header([序号], [通道或指数], [统计量]),
+    [1], [红通道 $R$], [$mu(R)$],
+    [2], [红通道 $R$], [$sigma(R)$],
+    [3], [绿通道 $G$], [$mu(G)$],
+    [4], [绿通道 $G$], [$sigma(G)$],
+    [5], [蓝通道 $B$], [$mu(B)$],
+    [6], [蓝通道 $B$], [$sigma(B)$],
+    [7], [ExG], [$mu("ExG")$],
+    [8], [ExG], [$sigma("ExG")$],
+    [9], [ExG], [$Q_10("ExG")$],
+    [10], [ExG], [$Q_50("ExG")$],
+    [11], [ExG], [$Q_90("ExG")$],
+    [12], [$D_("GR",3)$], [$mu(D_("GR",3))$],
+    [13], [$D_("GR",3)$], [$sigma(D_("GR",3))$],
+    [14], [$D_("GR",3)$], [$Q_10(D_("GR",3))$],
+    [15], [$D_("GR",3)$], [$Q_50(D_("GR",3))$],
+    [16], [$D_("GR",3)$], [$Q_90(D_("GR",3))$],
+    [17], [NGRDI], [$mu("NGRDI")$],
+    [18], [NGRDI], [$sigma("NGRDI")$],
+    [19], [NGRDI], [$Q_10("NGRDI")$],
+    [20], [NGRDI], [$Q_50("NGRDI")$],
+    [21], [NGRDI], [$Q_90("NGRDI")$],
   ))),
   caption: [定量实验所用 21 维结构化特征的定义与排列顺序。所有统计均基于整个输入图像块。],
 ) <tab:structured-feature-definitions>
@@ -150,6 +150,58 @@ $ mu(Z) = frac(1,P) sum_(p=1)^P Z_p, quad sigma(Z) = sqrt(frac(1,P) sum_(p=1)^P 
 除准确率和 Macro-F1 外，本节计算等级平均绝对误差（MAE），衡量预测与真实等级的平均偏差：
 $ "MAE" = frac(1, N) sum_(i=1)^N abs(hat(y)_i-y_i) $
 其中 $y_i$、$hat(y)_i$ 为真实和预测等级，$N$ 为样本数。MAE 单位为“级”。
+
+像素输入与结构化输入的对比流程见@code:structured-comparison。流程以相同顺序的全量样本为基础，按统一比例与随机种子生成划分索引；两项任务分别训练分类器，使用相同的图像输入与划分。21 维特征按上一节定义逐图计算，当前实现未将区域掩膜、覆盖度、形态或纹理统计纳入分类输入。
+
+#block(breakable: false)[
+#codeblock(
+  block(width: 100%, inset: (x: 5pt, y: 7pt), stroke: (top: 0.6pt, bottom: 0.6pt))[
+    #set text(size: 10pt)
+    #set par(first-line-indent: 0pt, leading: 3pt, spacing: 3pt, justify: false)
+    #let step(depth, body) = block(inset: (left: depth * 1em))[#text(body)]
+    #text("输入：按固定顺序组织的图像及双标签数据 D，划分比例 r，随机种子 s")
+
+    #text("输出：两项任务、五种配置在各子集上的指标及训练耗时")
+    #v(5pt)
+    #line(length: 100%, stroke: 0.4pt)
+    #v(5pt)
+    #grid(
+      columns: (1.6em, 1fr), column-gutter: 0.6em, row-gutter: 3pt,
+      align: (right, left),
+      [1], step(0, "按样本顺序读取图像与标签，构建像素向量矩阵 X_pixel"),
+      [2], step(0, "对每幅图像计算 21 维颜色与指数统计，保存特征表"),
+      [3], step(0, "按相同样本顺序读取特征表，构建特征矩阵 X_struct"),
+      [4], step(0, "按比例 r 与种子 s 生成训练、验证、测试索引 I_tr、I_va、I_te"),
+      [5], step(0, "两种输入均采用上述索引划分，不启用调试子采样"),
+      [6], step(0, "k ← min(256, 训练样本数)"),
+      [7], step(0, "定义五种模型配置："),
+      [], step(1, "Pixel+PCA+LR  : StandardScaler → PCA(k) → LR"),
+      [], step(1, "Pixel+RF      : RF"),
+      [], step(1, "Structured+LR : StandardScaler → LR"),
+      [], step(1, "Structured+RF : RF"),
+      [], step(1, "Structured+SVM: StandardScaler → SVM(RBF)"),
+      [8], step(0, "对目标 t ∈ {脱叶率等级, 吐絮率等级}："),
+      [9], step(1, "y ← D 中目标 t 对应的标签"),
+      [10], step(1, "对每一种配置 c："),
+      [11], step(2, "按配置选择 X_pixel 或 X_struct，创建新的模型 M"),
+      [12], step(2, "记录开始时间"),
+      [13], step(2, "M.fit(X[I_tr], y[I_tr])"),
+      [], step(2, "// 标准化与 PCA 仅在训练子集上拟合"),
+      [14], step(2, "记录本次拟合耗时"),
+      [15], step(2, "对子集 I ∈ {I_tr, I_va, I_te}："),
+      [16], step(3, "y_pred ← M.predict(X[I])"),
+      [17], step(3, "计算 Accuracy、Macro-F1、等级 MAE 和 ±1 级比例"),
+      [18], step(3, "保存配置名、任务名、子集、指标、耗时及模型参数"),
+      [19], step(0, "返回汇总结果"),
+    )
+  ],
+  caption: [像素向量与结构化特征的统一分类对比流程伪代码。],
+) <code:structured-comparison>
+]
+其中，StandardScaler 表示特征标准化，PCA 表示主成分分析，LR、RF 和 SVM 分别为逻辑回归、随机森林和支持向量机。两种 RF 输入使用相同模型配置，均直接送入随机森林；结构化 LR 与 RBF 核 SVM 先进行标准化。特征提取为逐图确定性计算，训练耗时从模型拟合开始计量，不包含图像读取与特征表生成。评价程序同时记录预测误差不超过 1 级的样本比例，本节结果表重点报告准确率、Macro-F1 和等级 MAE。
+
+上述固定配置对比程序不包含基于验证集的超参数搜索或训练后再拟合步骤。全量特征提取时，保留原数据的样本顺序与标签对应关系，是两种输入复用同一划分的前提；调试模式中的独立子采样不用于本节的统一对比流程。
+
 
 === 脱叶率与吐絮率分类结果
 
