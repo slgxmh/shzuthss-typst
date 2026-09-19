@@ -49,8 +49,6 @@
 
 #include "chapters/数据集/index.typ"
 
-= 基于机器学习的脱叶率与吐絮率识别
-
 #include "chapters/光谱指数/index.typ"
 
 = 面向开放场景的低光增强模型研究 <chap:lowlight>
