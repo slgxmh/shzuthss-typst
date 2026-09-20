@@ -63,7 +63,7 @@ $ bold(Y) = cal(V)(cal(B)(Gamma_(gamma)(T_(tau)(cal(N)(cal(W)(alpha bold(X))))))
 由于夜昼影像难以严格配准，训练采用合成图像对，真实夜间影像用于退化参数校准与分布比较。两类数据分别提供像素级监督和真实成像统计参照。
 
 #figure(
-  image("dataset_aug.jpg", width: 100%),
+  image("dataset_aug.png", width: 100%),
   caption: [
     低光增强训练对的生成流程。正常曝光无人机影像经多尺度裁剪后，施加曝光衰减、噪声及可选的轻度模糊等退化，形成低光输入与正常曝光目标 $(x, t)$。
   ],
