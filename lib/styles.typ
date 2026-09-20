@@ -6,7 +6,7 @@
   imagecounter, partcounter, rawcounter, skippedstate, tablecounter, 字体, 字号,
   引用记号,
 )
-#import "utils.typ": chinesenumbering
+#import "utils.typ": chinesenumbering, figurenumbering
 
 #let default-heading-spacing-before = (30pt, 18pt, 12pt, 6pt)
 #let default-heading-spacing-after = (30pt, 18pt, 12pt, 6pt)
@@ -111,7 +111,7 @@
 
   let header-gap = 3pt
 
-  set text(字号.五号, top-edge: 0.8em, bottom-edge: -0.2em)
+  set text(字号.小五, top-edge: 0.8em, bottom-edge: -0.2em)
   set par(spacing: 0pt)
   set align(center)
 
@@ -344,7 +344,7 @@
       if el.kind == image {
         link(el_loc, [
           #supplements.图
-          #chinesenumbering(
+          #figurenumbering(
             chaptercounter.at(el_loc).first(),
             imagecounter.at(el_loc).first(),
             location: el_loc,
@@ -353,7 +353,7 @@
       } else if el.kind == table {
         link(el_loc, [
           #supplements.表
-          #chinesenumbering(
+          #figurenumbering(
             chaptercounter.at(el_loc).first(),
             tablecounter.at(el_loc).first(),
             location: el_loc,
@@ -362,7 +362,7 @@
       } else if el.kind == "code" {
         link(el_loc, [
           #supplements.代码
-          #chinesenumbering(
+          #figurenumbering(
             chaptercounter.at(el_loc).first(),
             rawcounter.at(el_loc).first(),
             location: el_loc,

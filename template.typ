@@ -156,9 +156,9 @@
   set figure(
     numbering: (..nums) => context {
       if appendixcounter.at(here()).first() < 10 {
-        numbering("1.1", chaptercounter.at(here()).first(), ..nums)
+        numbering("1-1", chaptercounter.at(here()).first(), ..nums)
       } else {
-        numbering("A.1", chaptercounter.at(here()).first(), ..nums)
+        numbering("A-1", chaptercounter.at(here()).first(), ..nums)
       }
     },
   )
@@ -172,6 +172,8 @@
       }
     },
   )
+  // 公式中的字母与数字使用 Times New Roman，TNR 没有的数学符号回退到 New Computer Modern Math
+  show math.equation: set text(font: ("Times New Roman", "New Computer Modern Math"))
   set footnote(numbering: "①")
   show footnote.entry: it => {
     let loc = it.note.location()

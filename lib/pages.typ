@@ -208,10 +208,10 @@
   first-line-indent: 2em,
   cabstract,
 ) = {
-  // 固定 20pt 行距，段间无额外空白。
-  set text(top-edge: 0.8em, bottom-edge: -0.2em)
-  set par(leading: 8pt, spacing: 8pt, justify: true)
-  front-heading("摘要", enter-front: true, header: "摘要")
+  // 摘要正文：五号（10.5pt），保持 20pt 固定行距
+  set text(字号.五号, top-edge: 0.8em, bottom-edge: -0.2em)
+  set par(leading: 11.6pt, spacing: 11.6pt, justify: true)
+  front-heading("摘要", enter-front: true, header: "摘要", show-header: false)
   set par(first-line-indent: first-line-indent)
   cabstract
   // 如果发现关键词和内容挤到一起，或者关键词在下一页顶部
@@ -232,13 +232,13 @@
   blind: false,
   eabstract,
 ) = {
-  // 英文摘要标题，页眉为 ABSTRACT
+  // 英文摘要标题（不显示页眉）
   heading(
     numbering: none,
     outlined: false,
     supplement: [#metadata((
       pagebreak: true,
-      show-header: true,
+      show-header: false,
       header: "ABSTRACT",
       spacing-before: 30pt,
       spacing-after: 30pt,
@@ -247,9 +247,9 @@
     ))],
   )[#upper(etitle)]
 
-  // 固定 20pt 行距，段间无额外空白。
-  set text(top-edge: 0.8em, bottom-edge: -0.2em)
-  set par(spacing: 8pt, leading: 8pt, justify: true)
+  // 摘要正文：五号（10.5pt），保持 20pt 固定行距
+  set text(字号.五号, top-edge: 0.8em, bottom-edge: -0.2em)
+  set par(spacing: 11.6pt, leading: 11.6pt, justify: true)
   if not blind {
     [
       #set align(center)

@@ -72,6 +72,12 @@
   }
 }
 
+// 图表编号格式化：正文为"章-序号"（如 2-1），附录为"A-1"
+#let figurenumbering(..nums, location: none) = context {
+  let actual_loc = if location == none { here() } else { location }
+  numbering(if appendixcounter.at(actual_loc).first() < 10 { "1-1" } else { "A-1" }, ..nums)
+}
+
 // 从 figure caption 中提取用于列表条目链接的显示内容。
 // 输入为 str 时返回 trim 后的字符串；为 content 时先按 .body 递归解包，再若有 .children 则取第一个含非空 .text 的子节点，否则返回原 content。供 listoffigures 等用作 link 的显示文本。
 #let caption-to-text(a) = {
