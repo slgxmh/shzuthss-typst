@@ -20,7 +20,7 @@
 #v(2mm)
 #grid(columns: (1fr, 1fr, 1fr), column-gutter: 3mm, row-gutter: 2mm,
  heading[多源特征分析（第 3 章）], heading[低光增强（第 4 章）], heading[联合识别（第 5 章）],
- cell([棉花多光谱子集\ 波段与指数统计\ 可见光颜色与近红外纹理], height: 19mm),
+ cell([棉花多光谱样本集\ 波段与指数统计\ 可见光颜色与近红外纹理], height: 19mm),
  cell([农业源影像与低光校准\ 可控退化与配对样本\ 合成—真实统计比较], height: 19mm),
  cell([棉花双标签图像\ 共享骨干与双分类头\ 多尺度卷积注意力], height: 19mm),
  down, down, down,
