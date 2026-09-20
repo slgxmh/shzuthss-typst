@@ -172,7 +172,7 @@ $ bold(Y)_8 = op("round")(255 · op("clip")(bold(Y), 0, 1)). $
   kind: table,
 ) <tab:degradation-params>
 
-=== 合成数据与真实夜间数据的一致性评价
+=== 合成数据集的统计评价
 
 #figure(
   image("fig2_degradation.png", width: 100%),

@@ -292,7 +292,7 @@ $L^3$-AgriUAVNet 的参数量约为 LLFormer 的 1/42、Retinexformer 的 1/15 �
 
 配对统计也反映了这些差异。$L^3$-AgriUAVNet 相对 DW 变体的逐图像块 PSNR 平均提高 0.5366 dB（95% bootstrap CI $[0.5102, 0.5628]$，Holm 校正 $p < 0.001$）；相对移除 ESA、HVI 和 GMod 的变体，分别提高 0.6518、1.7276 和 2.6199 dB。上述比较均基于相同测试索引，反映各配置在固定域内样本上的差异。
 
-=== 真实低光图像测试
+=== 真实低光图像的增强质量评价
 
 #figure(
   image("fig6_real_low_light.jpg", width: 100%),
@@ -321,7 +321,7 @@ $L^3$-AgriUAVNet 的参数量约为 LLFormer 的 1/42、Retinexformer 的 1/15 �
 
 Tenengrad 从 33.16 提高至 102.87，边缘密度和局部对比度也增大，说明增强后的梯度与纹理响应更强。由于锐化和噪声也可能提高这些值，结构保留情况仍需结合图像观察。$L^3$-AgriUAVNet 的 NIQE 为 8.43，略高于 Raw 的 8.15；LLFormer 和 Retinexformer 在部分指标上更优。NIQE 与 BRISQUE 的排序不同，宜结合@fig:l3_real 的视觉结果判断。
 
-=== 模型性能验证
+=== 下游检测任务中的性能验证
 
 #figure(
   image("fig7_detection_examples.jpg", width: 100%),
