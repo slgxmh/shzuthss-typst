@@ -1,6 +1,6 @@
 #import "../../../template.typ": three-line-table, codeblock
 
-= 基于多光谱与可见光融合特征的脱叶率与吐絮率识别 <chap:ms-features>
+= 基于多光谱与可见光特征的脱叶率与吐絮率识别 <chap:ms-features>
 
 == 引言
 
