@@ -12,24 +12,24 @@
 #v(2mm)
 #grid(columns: (1fr, 1fr), column-gutter: 3mm, row-gutter: 2mm,
  heading[棉花双指标识别数据], heading[农业低光增强数据],
- cell([石河子多时相棉田无人机 RGB 影像\ 人工脱叶率与吐絮率调查\ 航点与双指标等级标签关联], height: 20mm),
+ cell([石河子多时相棉田无人机可见光与多光谱影像\ 人工脱叶率与吐絮率调查\ 航点与双指标等级标签关联], height: 20mm),
  cell([沙湾多作物正常曝光无人机影像\ 真实低光校准影像\ 源影像筛选与图像块制作], height: 20mm),
 )
 #down
 #band[方法研究｜特征比较、低光适配与轻量识别]
 #v(2mm)
 #grid(columns: (1fr, 1fr, 1fr), column-gutter: 3mm, row-gutter: 2mm,
- heading[传统机器学习（第 3 章）], heading[低光增强（第 4 章）], heading[联合识别（第 5 章）],
- cell([棉花双标签图像\ 像素向量基线\ 21 维颜色与指数统计], height: 19mm),
+ heading[多源特征分析（第 3 章）], heading[低光增强（第 4 章）], heading[联合识别（第 5 章）],
+ cell([棉花多光谱子集\ 波段与指数统计\ 可见光颜色与近红外纹理], height: 19mm),
  cell([农业源影像与低光校准\ 可控退化与配对样本\ 合成—真实统计比较], height: 19mm),
  cell([棉花双标签图像\ 共享骨干与双分类头\ 多尺度卷积注意力], height: 19mm),
  down, down, down,
- cell([PCA+LR、RF 像素基线\ LR、RF、SVM 结构化分类\ 特征相关性与低光测试], height: 19mm, fill: rgb("F2F5F6")),
+ cell([LR、RF、平衡RF、SVM 分类器比较\ 信息源与特征消融\ 特征相关性与错误分析], height: 19mm, fill: rgb("F2F5F6")),
  cell([$L^3$-AgriUAVNet\ 恢复质量与组件消融\ 真实低光及下游检测评价], height: 19mm, fill: rgb("F2F5F6")),
  cell([RTCMNet\ 模型对比与结构消融\ 双任务性能与设备时延], height: 19mm, fill: rgb("F2F5F6")),
 )
 #v(2mm)
-#cell([传统方法提供识别基线与特征依据；增强模型和 RTCMNet 用于田间流程。], height: 9mm)
+#cell([多源特征分析明确两项指标的信息来源；增强模型和 RTCMNet 用于田间流程。], height: 9mm)
 #down
 #band[田间验证｜正常光照与低光场景（第 6 章）]
 #v(2mm)
