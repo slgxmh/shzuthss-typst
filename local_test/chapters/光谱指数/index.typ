@@ -29,11 +29,11 @@
 
 四个多光谱波段 G、R、RE、NIR 各自提取均值、标准差与第 10、50、90 百分位数，共 $4 times 5 = 20$ 维。均值与标准差描述波段的整体响应水平与离散程度，三个分位数补充响应分布的低端、中位与高端信息。
 
-在反射率波段上计算四类多光谱指数，计算式见@tab:ms-indices。NDVI 与 GNDVI 描述近红外相对红光、绿光的优势，NDRE 利用红边波段对叶绿素与冠层结构变化更敏感，RVI 以比值形式强调近红外与红光的相对关系@tucker1979ndvi@gitelson1996gndvi@barnes2000ndre@jordan1969rvi。每个指数同样提取均值、标准差与三个分位数，共 $4 times 5 = 20$ 维。不同脱叶等级样本的波段与指数响应见@fig:feature-maps。
+在反射率波段上计算四类多光谱指数，计算式见@tab:ms-indices。NDVI 与 GNDVI 描述近红外相对红光、绿光的优势，NDRE 利用红边波段对叶绿素与冠层结构变化更敏感，RVI 以比值形式强调近红外与红光的相对关系@tucker1979ndvi@gitelson1996gndvi@barnes2000ndre@jordan1969rvi。每个指数同样提取均值、标准差与三个分位数，共 $4 times 5 = 20$ 维。不同脱叶率等级样本的波段与指数响应见@fig:feature-maps。
 
 #figure(
   image("feature_maps_de.jpg", width: 82%),
-  caption: [不同脱叶等级样本的多光谱波段与光谱指数对照。每行自上而下为脱叶率 0--7 级，每列依次为可见光影像，G、R、RE、NIR 波段，以及 NDVI、NDRE。波段影像以灰度显示，指数以红蓝着色表示相对高低。],
+  caption: [不同脱叶率等级样本的多光谱波段与光谱指数对照。每行自上而下为脱叶率 0--7 级，每列依次为可见光影像，G、R、RE、NIR 波段，以及 NDVI、NDRE。波段影像以灰度显示，指数以红蓝着色表示相对高低。],
 ) <fig:feature-maps>
 
 === 可见光颜色与指数特征
