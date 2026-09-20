@@ -129,12 +129,12 @@ $ text("GMACs") = frac(text("MACs")_("total"), 10^9) $
     set text(size: 7.5pt)
     three-line-table(all_metrics)
   },
-  caption: [不同模型在脱叶率与吐絮率双任务上的综合性能。准确率、F1、精确率和召回率为每次划分两项任务对应指标的算术平均，表中报告五次重复随机划分的均值 $plus.minus$ 标准差；参数量、MACs 和推理时间为确定性部署指标。],
+  caption: [不同模型在脱叶率与吐絮率双任务上的综合性能。准确率、F1、精确率和召回率为每次划分两项任务对应指标的算术平均，表中报告五次重复随机划分的均值 $plus.minus$ 标准差；参数量、MACs 和推理时间为确定性部署指标。MobileNetV3-Small 因参数量过小，在统一协议下未收敛，结果接近随机猜测水平，仅作对照列出。],
 )<tab:allmetric>
 
 在五次重复随机划分中，DenseNet-121 在经典模型组中表现最好（@tab:allmetric）：双任务平均准确率和 Macro-F1 均为 $0.94 plus.minus 0.01$，宏平均精确率为 $0.95 plus.minus 0.01$，宏平均召回率为 $0.94 plus.minus 0.01$。ResNet-18 的准确率为 $0.89 plus.minus 0.04$、宏平均精确率为 $0.91 plus.minus 0.04$；InceptionV3 与 ViT-S 的准确率分别为 $0.79 plus.minus 0.04$ 和 $0.77 plus.minus 0.04$。
 
-在轻量级模型方面，ShuffleNetV2 的准确率和 Macro-F1 均为 $0.92 plus.minus 0.02$，宏平均精确率为 $0.93 plus.minus 0.02$，表现出较强的识别性能。EfficientNet 的准确率为 $0.88 plus.minus 0.04$，LeViT-128 为 $0.86 plus.minus 0.05$。MobileNetV2 与 MobileNetV3-Small 的准确率分别为 $0.74 plus.minus 0.01$ 和 $0.13 plus.minus 0.00$，表明不同轻量结构在当前任务上的表现差异较大；这些结果仅反映统一实验协议下的经验差异，不将单一模型的低分直接归因于轻量化程度。
+在轻量级模型方面，ShuffleNetV2 的准确率和 Macro-F1 均为 $0.92 plus.minus 0.02$，宏平均精确率为 $0.93 plus.minus 0.02$，表现出较强的识别性能。EfficientNet 的准确率为 $0.88 plus.minus 0.04$，LeViT-128 为 $0.86 plus.minus 0.05$。MobileNetV2 与 MobileNetV3-Small 的准确率分别为 $0.74 plus.minus 0.01$ 和 $0.13 plus.minus 0.00$：其中 MobileNetV3-Small 的成绩接近随机猜测水平（脱叶率 8 类的随机准确率约为 0.125），说明其参数量过小、模型容量不足以学习本任务的判别特征，在统一训练协议下未能收敛，表中仅作对照列出；其余结果仅反映统一实验协议下的经验差异，不将单一模型的低分直接归因于轻量化程度。
 
 RTCMNet 的准确率、Macro-F1、宏平均精确率和宏平均召回率均为 $0.93 plus.minus 0.02$，与性能最高的 DenseNet-121 接近，并高于当前实验中的 SCTNet（准确率为 $0.86 plus.minus 0.13$）。最终采用的 RTCMNet 含 0.37 M 参数、0.19 GMACs，在保持较高双任务平均性能的同时显著降低了模型规模和计算开销，体现出面向资源受限设备的精度–效率权衡。
 
@@ -145,7 +145,7 @@ RTCMNet 的准确率、Macro-F1、宏平均精确率和宏平均召回率均为 
 
 如@fig:model_params 所示，本研究构建的 RTCMNet 在分类性能与运算效率之间实现了较好的平衡。DenseNet-121 的参数量为 6.63 M，移动端推理时间为 1084 ms；最终采用的 RTCMNet 仅需 0.37 M 参数，约为 DenseNet-121 的 5.6%，双任务平均准确率为 $0.93 plus.minus 0.02$，与 DenseNet-121 的 $0.94 plus.minus 0.01$ 接近，且在 DJI 遥控器上的推理时延仅为 32 ms。
 
-与 MobileNetV2 相比，RTCMNet 参数量更小、GMACs 更低，推理时间由 62 ms 降至 32 ms，双任务平均准确率则由 $0.74 plus.minus 0.01$ 提高至 $0.93 plus.minus 0.02$。MobileNetV3-Small 虽具有较低推理时延，但其准确率为 $0.13 plus.minus 0.00$；因此，轻量模型仍需结合识别精度和设备时延共同评价。
+与 MobileNetV2 相比，RTCMNet 参数量更小、GMACs 更低，推理时间由 62 ms 降至 32 ms，双任务平均准确率则由 $0.74 plus.minus 0.01$ 提高至 $0.93 plus.minus 0.02$。MobileNetV3-Small 虽具有较低推理时延，但因模型容量不足未能收敛，其准确率仅为 $0.13 plus.minus 0.00$，不具备实际识别能力；因此，轻量模型仍需结合识别精度和设备时延共同评价。
 ShuffleNetV2 与 EfficientNet 也表现出较好的准确率和较快的推理速度，但它们的参数量明显高于 RTCMNet：ShuffleNetV2 的参数量为 5.10 M，约为 RTCMNet（0.37 M）的 13.8 倍，EfficientNet 则约为 3.82 M。在计算资源受限的无人机等边缘设备中，更大的模型规模会增加存储与部署成本，不利于灵活集成。
 如@fig:model_params (b) 所示，RTCMNet 在 DJI 遥控器上的推理时延低于 SCTNet 等轻量网络，表明其能够满足当前设备上的低时延推理需求。该结果为脱叶率与吐絮率的现场快速识别提供了设备端依据。
 
@@ -161,7 +161,7 @@ ShuffleNetV2 与 EfficientNet 也表现出较好的准确率和较快的推理�
 @fig:defoliation_res 给出了不同模型在脱叶率等级分类任务上的准确率、精确率、召回率和 F1；其数据处理和评价协议与吐絮率任务一致。
 DenseNet-121 在脱叶率任务上的准确率、精确率、召回率和 F1 均为 0.95。ShuffleNetV2 与 ResNet-18 的结果较为接近，前者略高。
 ShuffleNetV2 在轻量模型中表现较好，以小于部分经典模型的规模获得较高分类指标。
-EfficientNet 和 SqueezeNet 的指标低于 ShuffleNetV2；MobileNetV3-Small 的准确率仅为 0.13。该结果说明这一模型在当前训练协议下未能有效完成分类，其原因还需结合训练过程检查，不能仅由参数量解释。
+EfficientNet 和 SqueezeNet 的指标低于 ShuffleNetV2；MobileNetV3-Small 的准确率仅为 0.13，接近 8 类随机猜测水平。该结果说明这一模型在当前训练协议下未能有效完成分类：其参数量过小，模型容量不足以学习脱叶率等级判别所需的特征，训练后仍停留在近似随机猜测的状态，而非数据或评价协议所致。
 MobileNetV2 的脱叶率准确率为 0.85，低于本任务中表现较好的模型。
 
 RTCMNet 的综合指标优于多数轻量基线，而模型规模显著小于 DenseNet-121，体现了识别性能与部署效率之间的平衡。
