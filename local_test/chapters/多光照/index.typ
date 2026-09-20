@@ -6,7 +6,7 @@
 
 #figure(
   image("fig3_architecture.png", width: 100%),
-  caption: [$L^3$-AgriUAVNet 及其核心模块。],
+  caption: [$L^3$-AgriUAVNet 及其核心模块],
 ) <fig:l3_network>
 
 *设计目标与总体流程。*$L^3$-AgriUAVNet 用于提高暗区可见度，保留幼苗边界与作物行纹理，并减轻低照度和白平衡变化引起的通道比例偏移。网络以较浅主干和有限通道数控制端侧开销，整体结构见@fig:l3_network (a)。图中，(a) 为总体增强路径：RGB 输入经 HVI 变换、$3 times 3$ 头部卷积、两个 RFDN-S、全局调制和 HVI 空间残差重建后转回 RGB；(b) 为 RFDN-S，通过三级逐步特征蒸馏获得 $d_1, d_2, d_3$，再将最后变换特征 $r_4$ 与其拼接，经 $1 times 1$ 融合、ESA 和局部残差输出；(c) 为 ESA，通过通道压缩、下采样空间编码和上采样生成像素级注意力；(d) 为 GMod，使用全局平均池化与 MLP 预测逐通道增益和偏置。$L^3$-AgriUAVNet 使用两个块、48 通道、0.25 蒸馏比和标准卷积，共 0.139 M 参数。设归一化低光输入为 $bold(I)_("rgb") in [0, 1]^(B times 3 times H times W)$，前向过程为
@@ -108,7 +108,7 @@ $ bold(R)_("hvi") = phi_t ([bold(F)_0, bold(F)_m]), quad hat(bold(Z)) = bold(Z) 
     [SCI@ma2022sci], [RGB 单流], [推理时使用单个照明增强块], [无 HVI、ESA 或 GMod], [极轻量直接对照；侧重自校准照明估计，与本章的单流 HVI 表征路径和蒸馏主干不同],
     [$L^3$-AgriUAVNet], [单流 HVI 表征路径与 HVI 空间残差重建], [2 个 RFDN-S，$C = 48$、$d \/ r = 12 \/ 36$，精简 ESA 与块级残差], [单次 GAP–MLP 预测逐通道增益和偏置，零初始化], [面向农业无人机参数预算的轻量配置与任务导向集成],
   )),
-  caption: [$L^3$-AgriUAVNet 与最邻近架构的结构关系。],
+  caption: [$L^3$-AgriUAVNet 与最邻近架构的结构关系],
   kind: table,
 ) <tab:l3_arch_relation>
 
@@ -202,7 +202,7 @@ $D_("RGB")$ 越低表示三个通道的全局均值越均衡；该指标刻画�
     [SCI@ma2022sci], [*0.022*], [*1.493*], [21.86], [0.773], [0.0731], [0.289],
     [*$L^3$-AgriUAVNet*], [0.139], [6.252], [26.24], [*0.893*], [0.0452], [0.119],
   )),
-  caption: [合成配对测试集上的增强质量与模型复杂度。],
+  caption: [合成配对测试集上的增强质量与模型复杂度],
   kind: table,
 ) <tab:l3_overall>
 
@@ -220,7 +220,7 @@ $L^3$-AgriUAVNet 的参数量约为 LLFormer 的 1/42、Retinexformer 的 1/15 �
 
 #figure(
   image("fig4_quality_efficiency.png", width: 90%),
-  caption: [合成配对测试集上的质量–参数量权衡。],
+  caption: [合成配对测试集上的质量–参数量权衡],
 ) <fig:l3_quality_efficiency>
 
 @fig:l3_quality_efficiency 中，参数量采用对数坐标，以区分大型 Transformer 与轻量模型；$L^3$-AgriUAVNet 位于高 SSIM 与低参数量的质量–参数量前沿，但 LLFormer 仍具有更高 PSNR，计算量和设备端延迟分别见@tab:l3_overall 和@tab:l3_ipad。该图与@tab:l3_overall 显示，$L^3$-AgriUAVNet 在较低参数量和 MACs 下取得了较高 SSIM。RFDN 的参数量和 MACs 分别为其约 2.7 倍和 2.8 倍；HVI-CIDNet 的参数量约为其 14.2 倍，但两者 MACs 接近。参数量描述存储规模，MACs 描述计算需求，两者需要分别报告。
@@ -234,7 +234,7 @@ $L^3$-AgriUAVNet 的参数量约为 LLFormer 的 1/42、Retinexformer 的 1/15 �
     [RFDN], [1281], [0.78],
     [Retinexformer], [2712], [0.37],
   )),
-  caption: [iPad Air（第 3 代）上的软件端模型推理效率。],
+  caption: [iPad Air（第 3 代）上的软件端模型推理效率],
   kind: table,
 ) <tab:l3_ipad>
 
@@ -244,7 +244,7 @@ $L^3$-AgriUAVNet 的参数量约为 LLFormer 的 1/42、Retinexformer 的 1/15 �
 
 #figure(
   image("fig5_ablation_design.png", width: 100%),
-  caption: [组件与配置消融的 PSNR 差异。],
+  caption: [组件与配置消融的 PSNR 差异],
 ) <fig:l3_ablation>
 
 本章将单流 HVI、两个 RFDN-S 和一次全局仿射调制组合作为最终配置。早期原型曾同时调整结构、损失与训练设置，难以区分各项改动的作用，因此这里以@fig:l3_ablation 和@tab:l3_ablation 中的单因素消融作为结构选择的主要依据。图中横向条形图给出各变体相对 $L^3$-AgriUAVNet 的 PSNR 变化，颜色区分组件移除、卷积类型、网络深度和通道宽度；$L^3$-AgriUAVNet 使用标准卷积，$L^3$-AgriUAVNet-DW 为其他配置相同的 DWConv 基线。
@@ -268,7 +268,7 @@ $L^3$-AgriUAVNet 的参数量约为 LLFormer 的 1/42、Retinexformer 的 1/15 �
     [w/o HVI], [--], [$checkmark$], [$checkmark$], [std], [2/48], [24.52], [0.852], [0.0528], [0.171],
     [w/o GMod], [$checkmark$], [--], [$checkmark$], [std], [2/48], [23.63], [0.849], [0.0599], [0.184],
   )),
-  caption: [$L^3$-AgriUAVNet 的消融结果。],
+  caption: [$L^3$-AgriUAVNet 的消融结果],
   kind: table,
 ) <tab:l3_ablation>
 
@@ -282,7 +282,7 @@ $L^3$-AgriUAVNet 的参数量约为 LLFormer 的 1/42、Retinexformer 的 1/15 �
 
 #figure(
   image("fig6_real_low_light.jpg", width: 100%),
-  caption: [真实低光玉米苗无人机图像块上的定性比较。],
+  caption: [真实低光玉米苗无人机图像块上的定性比较],
 ) <fig:l3_real>
 
 #figure(
@@ -295,7 +295,7 @@ $L^3$-AgriUAVNet 的参数量约为 LLFormer 的 1/42、Retinexformer 的 1/15 �
     [Retinexformer], [8.77], [*47.29*], [0.00%], [0.0222], [102.93], [0.3033], [19.95],
     [RFDN], [9.05], [52.74], [0.00%], [0.0611], [75.22], [0.2147], [15.60],
   )),
-  caption: [真实低光玉米苗数据的无参考评价。],
+  caption: [真实低光玉米苗数据的无参考评价],
   kind: table,
 ) <tab:l3_real_no_ref>
 
@@ -307,7 +307,7 @@ Tenengrad 从 33.16 提高至 102.87，边缘密度和局部对比度也增大�
 
 #figure(
   image("fig7_detection_examples.jpg", width: 100%),
-  caption: [YOLOv8n 的应用示例与汇总 mAP。],
+  caption: [YOLOv8n 的应用示例与汇总 mAP],
 ) <fig:l3_res_task>
 
 下游检测作为同一玉米苗低光数据集上的第二种评价路径，用于考察增强表征的农业应用价值。@fig:l3_res_task 展示了有代表性的 YOLOv8n 检测示例及汇总比较，定量结果由@tab:l3_yolov8n 的聚合指标给出。按照实验设置中的统一协议，YOLOv8n@jocher2023yolov8 分别在 Raw、$L^3$-AgriUAVNet、RFDN、LLFormer 和 Retinexformer 输入分布上训练与测试，测试集包含 139 个图像块。
@@ -322,7 +322,7 @@ Tenengrad 从 33.16 提高至 102.87，边缘密度和局部对比度也增大�
     [Retinexformer], [0.1413], [0.0398], [0.2929], [0.2118],
     [RFDN], [0.1646], [0.0469], [0.3285], [0.2257],
   )),
-  caption: [YOLOv8n 应用导向评价。],
+  caption: [YOLOv8n 应用导向评价],
   kind: table,
 ) <tab:l3_yolov8n>
 
@@ -339,7 +339,7 @@ Tenengrad 从 33.16 提高至 102.87，边缘密度和局部对比度也增大�
     [Retinexformer], [0.3382], [0.4869], [0.3333],
   )),
   caption: [
-    YOLOv8s 应用导向评价。
+    YOLOv8s 应用导向评价
   ],
   kind: table,
 ) <tab:l3_yolov8s>

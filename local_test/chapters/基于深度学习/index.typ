@@ -11,7 +11,7 @@
 
 #figure(
   image("overview.png"),
-  caption: "棉花脱叶率与吐絮率识别任务工作流。",
+  caption: "棉花脱叶率与吐絮率识别任务工作流",
 )<fig:workflow>
 
 == 方法 <sec:method>
@@ -19,7 +19,7 @@
 
 #figure(
   image("network.png"),
-  caption: "RTCMNet 网络结构总览。",
+  caption: "RTCMNet 网络结构总览",
 )<fig:network>
 
 增加模型复杂度可能改善识别，却也会提高训练与部署成本。对于棉田影像，还需在有限计算量下同时描述局部冠层细节和较大范围的上下文。本研究据此设计 RTCMNet，在轻量主干中引入多尺度卷积注意力模块（MSCA Block），并以双分类头联合预测脱叶率与吐絮率。网络整体结构如@fig:network 所示：（a）特征提取主干由 stem 和 layer_1 至 layer_4 组成；（b）Conv Block 使用二维卷积与批归一化提取特征；（c）多尺度卷积注意力通过不同尺度的卷积分支聚合局部与上下文信息；（d）MSCA Block 结合卷积注意力、Drop Path 和 MLP；最右侧两个结构相同的分类器分别输出脱叶率与吐絮率等级。
@@ -72,7 +72,7 @@ $ cal(L)_"total" = cal(L)_"DE" + cal(L)_"BA". $
 
 #figure(
   image("training_curves.png", width: 100%),
-  caption: [相同训练协议下 RTCMNet、ViT-S 与 DenseNet-121 的训练过程对比。],
+  caption: [相同训练协议下 RTCMNet、ViT-S 与 DenseNet-121 的训练过程对比],
 ) <fig:training-curves>
 
 === 评价方案
@@ -125,7 +125,7 @@ $ text("GMACs") = frac(text("MACs")_("total"), 10^9) $
     set text(size: 7.5pt)
     three-line-table(all_metrics)
   },
-  caption: [不同模型在脱叶率与吐絮率双任务上的综合性能。],
+  caption: [不同模型在脱叶率与吐絮率双任务上的综合性能],
 )<tab:allmetric>
 
 @tab:allmetric 报告五次重复随机划分的均值 $plus.minus$ 标准差，其中准确率、F1、精确率和召回率为每次划分两项任务对应指标的算术平均；参数量、MACs 和推理时间为确定性部署指标。在五次重复随机划分中，DenseNet-121 在经典模型组中表现最好：双任务平均准确率和 Macro-F1 均为 $0.94 plus.minus 0.01$，宏平均精确率为 $0.95 plus.minus 0.01$，宏平均召回率为 $0.94 plus.minus 0.01$。ResNet-18 的准确率为 $0.89 plus.minus 0.04$、宏平均精确率为 $0.91 plus.minus 0.04$；InceptionV3 与 ViT-S 的准确率分别为 $0.79 plus.minus 0.04$ 和 $0.77 plus.minus 0.04$。
@@ -136,7 +136,7 @@ RTCMNet 的准确率、Macro-F1、宏平均精确率和宏平均召回率均为 
 
 #figure(
   block(image("model_params.png")),
-  caption: "模型参数量、识别性能与推理时间对比。",
+  caption: "模型参数量、识别性能与推理时间对比",
 )<fig:model_params>
 
 如@fig:model_params 所示，(a) 为准确率、参数量与推理时间之间的关系，(b) 为 DJI 遥控器平台上的推理时间；本研究构建的 RTCMNet 在分类性能与运算效率之间实现了较好的平衡。DenseNet-121 的参数量为 6.63 M，移动端推理时间为 1084 ms；最终采用的 RTCMNet 仅需 0.37 M 参数，约为 DenseNet-121 的 5.6%，双任务平均准确率为 $0.93 plus.minus 0.02$，与 DenseNet-121 的 $0.94 plus.minus 0.01$ 接近，且在 DJI 遥控器上的推理时延仅为 32 ms。
@@ -151,7 +151,7 @@ ShuffleNetV2 与 EfficientNet 也表现出较好的准确率和较快的推理�
 
 #figure(
   image("de_res.png"),
-  caption: "不同模型的脱叶率等级分类结果。",
+  caption: "不同模型的脱叶率等级分类结果",
 )<fig:defoliation_res>
 
 @fig:defoliation_res 给出了不同模型在脱叶率等级分类任务上的准确率、精确率、召回率和 F1；其数据处理和评价协议与吐絮率任务一致。
@@ -168,7 +168,7 @@ RTCMNet 的综合指标优于多数轻量基线，而模型规模显著小于 De
 
 #figure(
   image("bo_res.png"),
-  caption: "不同模型的吐絮率等级分类结果。",
+  caption: "不同模型的吐絮率等级分类结果",
 )<fig:boll_opening_res>
 
 @fig:boll_opening_res 给出了不同模型在吐絮率等级分类任务上的准确率、精确率、召回率和 F1。DenseNet-121 的四项指标最高；RTCMNet 的综合表现仅次于 DenseNet-121，并优于大部分轻量模型，其精确率优势较为明显。
@@ -181,7 +181,7 @@ RTCMNet 的综合指标优于多数轻量基线，而模型规模显著小于 De
 
 #figure(
   three-line-table(ablation_study),
-  caption: "RTCMNet 消融实验。",
+  caption: "RTCMNet 消融实验",
 )<tab:ablation_study>
 
 为分析注意力类型和网络规模的影响，本研究以 Conv-Former Block@xu2024sctnet 替换 MSCA Block，并调整层数与头数。@tab:ablation_study 比较了各配置的准确率、端侧时延和计算量。
@@ -194,7 +194,7 @@ RTCMNet 的综合指标优于多数轻量基线，而模型规模显著小于 De
 
 #figure(
   image("model_feature.png"),
-  caption: "不同骨干网络的输出特征可视化。",
+  caption: "不同骨干网络的输出特征可视化",
 )<fig:model_feature>
 
 为比较不同骨干网络的特征分布，本研究向已训练模型输入相同样本，提取骨干输出，并使用 t-SNE（t-Distributed Stochastic Neighbor Embedding）将高维特征降至三维进行可视化，结果如@fig:model_feature 所示。

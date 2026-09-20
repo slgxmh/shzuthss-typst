@@ -16,7 +16,7 @@
 
 #figure(
   image("data_area.png"),
-  caption: "试验区概况。",
+  caption: "试验区概况",
 ) <fig:data_area>
 
 === 沙湾大田农业实验区 <sec:shawan-area>
@@ -27,7 +27,7 @@
 
 #figure(
   image("area.png", width: 90%),
-  caption: [研究区域示意图。],
+  caption: [研究区域示意图],
 ) <fig:lowlight_area>
 
 == 棉花脱叶率与吐絮率数据集构建 <sec:cotton-dataset>
@@ -50,7 +50,7 @@
       [飞行速度], [2.7m/s], [减少运动模糊，保持图像清晰],
     ),
   ),
-  caption: "无人机航线与影像采集参数。",
+  caption: "无人机航线与影像采集参数",
 ) <tab:fly_param>
 
 === 样方布设
@@ -59,12 +59,12 @@
 
 #figure(
   image("数据集-样方分布.png", width: 100%),
-  caption: "棉花双指标人工调查样方分布。",
+  caption: "棉花双指标人工调查样方分布",
 ) <fig:quadrat-distribution>
 
 #figure(
   image("数据集-样方情况.png", width: 100%),
-  caption: "试验田内典型样方情况及其对应无人机影像。",
+  caption: "试验田内典型样方情况及其对应无人机影像",
 ) <fig:quadrat-conditions>
 
 === 数据标注
@@ -82,12 +82,12 @@ $ "DE"_t = (1 - frac(L_t, L_0)) times 100 % $ <eq:de>
 
 #figure(
   image("数据集-脱叶-采集标准.png", width: 70%),
-  caption: "脱叶率人工调查中残留叶片的判定标准。",
+  caption: "脱叶率人工调查中残留叶片的判定标准",
 ) <fig:defoliation-standard>
 
 #figure(
   image("数据集-吐絮-采集标准.png", width: 70%),
-  caption: "吐絮率人工调查中开放棉铃的判定标准。",
+  caption: "吐絮率人工调查中开放棉铃的判定标准",
 ) <fig:boll-standard>
 
 === 航点影像数据管理与样本构建工具 <sec:uav-data-tool>
@@ -98,7 +98,7 @@ $ "DE"_t = (1 - frac(L_t, L_0)) times 100 % $ <eq:de>
 
 #figure(
   image("software_main.png"),
-  caption: "无人机航点影像数据管理工具界面。",
+  caption: "无人机航点影像数据管理工具界面",
 ) <fig:uav-data-manager>
 
 地图界面按编号显示各航点，支持单点选择和矩形框选。研究人员查看影像预览后，根据田块边界、清晰度和目标完整性决定样本取舍。MRK 路径与已选航点编号等状态可保存到工作区，便于恢复中断的筛选任务，也使各批次的处理范围可以复查。
@@ -116,12 +116,12 @@ $ "DE"_t = (1 - frac(L_t, L_0)) times 100 % $ <eq:de>
     [裁剪任务导出], [桌面工具], [输出入选航点、影像文件及裁剪参数],
     [样本生成与封装], [Python 脚本], [完成批量裁剪、标签汇总、HDF5 封装],
   )),
-  caption: "无人机航点影像数据管理与样本构建工具的功能组成。",
+  caption: "无人机航点影像数据管理与样本构建工具的功能组成",
 ) <tab:uav-data-tool-modules>
 
 #figure(
   image("software_flow.png", width: 100%),
-  caption: "基于自主开发工具的无人机航点影像筛选与样本构建流程。",
+  caption: "基于自主开发工具的无人机航点影像筛选与样本构建流程",
 ) <fig:uav-data-pipeline>
 
 === 数据集概况
@@ -144,7 +144,7 @@ $ "DE"_t = (1 - frac(L_t, L_0)) times 100 % $ <eq:de>
     [8], [80--89%], [—], [●],
     [9], [90--100%], [—], [●],
   )),
-  caption: [脱叶率与吐絮率的等级划分定义及本数据集的实际覆盖范围。],
+  caption: [脱叶率与吐絮率的等级划分定义及本数据集的实际覆盖范围],
   kind: table,
 ) <tab:grade-definition>
 
@@ -154,7 +154,7 @@ $ "DE"_t = (1 - frac(L_t, L_0)) times 100 % $ <eq:de>
 
 #figure(
   image("dataset_num.png"),
-  caption: "棉花双指标数据集示例与等级分布。",
+  caption: "棉花双指标数据集示例与等级分布",
 )<fig:dataset_num>
 
 受催熟进程和观测时间窗口限制，数据集标签未覆盖全部理论等级。施用脱叶催熟剂时，棉花已具有一定的自然吐絮水平，因此首次观测的吐絮率并非从零开始，实际样本主要分布在 4--9 级；另一方面，受植株生理状态、田间环境和药剂作用差异影响，观测期末仍存在一定叶片残留，脱叶率未达到理论最高等级，实际样本分布在 0--7 级。这一标签范围与试验期内实际观测到的成熟状态相对应。
@@ -169,7 +169,7 @@ $ "DE"_t = (1 - frac(L_t, L_0)) times 100 % $ <eq:de>
     [`de_labels`], [脱叶率标签], [`(N,)`], [`int8`],
     [`ba_labels`], [吐絮率标签], [`(N,)`], [`int8`],
   )),
-  caption: "HDF5 数据文件核心字段说明。",
+  caption: "HDF5 数据文件核心字段说明",
 ) <tab:hdf5-core>
 
 其中，$N$ 表示样本总数，本数据集中为 32 725。图像采用通道优先（$C, H, W$）格式，能够被常见机器学习框架直接读入，减少数据转置和额外预处理带来的工程开销。
@@ -195,7 +195,7 @@ $ "DE"_t = (1 - frac(L_t, L_0)) times 100 % $ <eq:de>
     [9], [—], [3 830],
     [合计], [7 770], [7 770],
   )),
-  caption: [多光谱样本集各等级样本数分布。],
+  caption: [多光谱样本集各等级样本数分布],
   kind: table,
 ) <tab:ms-sample-dist>
 
@@ -203,7 +203,7 @@ $ "DE"_t = (1 - frac(L_t, L_0)) times 100 % $ <eq:de>
 
 #figure(
   image("数据集-辐射矫正图像.png", width: 100%),
-  caption: "反射率板影像及其在各多光谱波段中的响应。",
+  caption: "反射率板影像及其在各多光谱波段中的响应",
 ) <fig:radiometric-calibration>
 
 == 大田农业低光增强数据集构建 <sec:lowlight-dataset>
@@ -238,7 +238,7 @@ $ "DE"_t = (1 - frac(L_t, L_0)) times 100 % $ <eq:de>
 
 #figure(
   image("vi_imaging_chain.png", width: 100%),
-  caption: [可见光成像链路、主要扰动源及其对图像与特征的影响。],
+  caption: [可见光成像链路、主要扰动源及其对图像与特征的影响],
 ) <fig:vi-imaging>
 
 === 可见光植被指数与颜色统计
@@ -259,7 +259,7 @@ $ "DE"_t = (1 - frac(L_t, L_0)) times 100 % $ <eq:de>
     [TGI\ 三角绿度指数@hunt2013tgi], [$-0.5[190(R-G)-120(R-B)]$], [以叶绿素吸收形成的三角形面积描述绿度；按 8-bit 数值定义，依赖通道响应与数值范围],
     [CIVE\ 植被提取颜色指数@kataoka2003cive], [$0.441R-0.811G+0.385B+18.79$], [三通道线性组合，突出植被区域；含常数项，结果依赖数值范围],
   )),
-  caption: [常见可见光植被指数的计算式、构造思想与适用条件。],
+  caption: [常见可见光植被指数的计算式、构造思想与适用条件],
   kind: table,
 ) <tab:vi-definitions>
 
@@ -333,7 +333,7 @@ $ H_("out") = floor((H + 2p - K)/s) + 1,quad W_("out") = floor((W + 2p - K)/s) +
 
 #figure(
   image("conv.png", width: 100%),
-  caption: [卷积运算、参数共享与感受野扩大的示意。],
+  caption: [卷积运算、参数共享与感受野扩大的示意],
 ) <fig:conv-receptive>
 
 === 视觉 Transformer 与卷积的互补
@@ -356,7 +356,7 @@ $ H_("out") = floor((H + 2p - K)/s) + 1,quad W_("out") = floor((W + 2p - K)/s) +
     [数据与预训练], [小样本条件下较易训练], [通常需要大规模数据或预训练],
     [*本文取舍*], [作为识别骨干的基础（第 5 章）], [以多尺度卷积注意力近似全局建模（5.2 节）],
   )),
-  caption: [卷积与自注意力在各维度上的主要差异及本文的取舍。],
+  caption: [卷积与自注意力在各维度上的主要差异及本文的取舍],
   kind: table,
 ) <tab:cnn-vit>
 
@@ -398,7 +398,7 @@ $ "Attention"(bold(Q), bold(K), bold(V)) = "softmax"(bold(Q) bold(K)^top / sqrt(
 
 #figure(
   image("attn_taxonomy.svg", width: 100%),
-  caption: [通道、空间与自注意力三种类型的权重张量形状与作用位置。],
+  caption: [通道、空间与自注意力三种类型的权重张量形状与作用位置],
 ) <fig:attn-taxonomy>
 
 通道注意力依据全局统计量为各通道分配权重，额外开销通常很低：SE 模块通过全局平均池化获得通道描述子，经两层全连接与 sigmoid 门控生成通道权重，实现逐通道重标定@hu2018senet。该结构即插即用、易于嵌入轻量骨干，但只建模通道维度，缺少对空间位置的选择性；后续工作通过一维卷积或分组机制压缩门控开销，或以多分支结构对通道响应进行选择，在相近开销下改善重标定效果。
@@ -423,7 +423,7 @@ $ "Attention"(bold(Q), bold(K), bold(V)) = "softmax"(bold(Q) bold(K)^top / sqrt(
     [CBAM@woo2018cbam], [通道 + 空间注意力], [通道与空间注意力串联细化特征], [低，池化统计与轻量卷积], [兼顾位置与通道；顺序结构略增时延],
     [EMA@ouyang2023ema], [跨空间注意力], [跨空间交互聚合多尺度上下文], [低，分组卷积与池化统计], [轻量且引入多尺度信息；结构略复杂],
   )),
-  caption: [代表性注意力机制的类型、核心思想与额外开销对比。],
+  caption: [代表性注意力机制的类型、核心思想与额外开销对比],
   kind: table,
 ) <tab:attn_compare>
 
