@@ -29,23 +29,31 @@
 
 四个多光谱波段 G、R、RE、NIR 各自提取均值、标准差与第 10、50、90 百分位数，共 $4 times 5 = 20$ 维。均值与标准差描述波段的整体响应水平与离散程度，三个分位数补充响应分布的低端、中位与高端信息。
 
-在归一化波段上计算四类常用光谱指数：归一化差分植被指数（NDVI）、绿通道归一化差分植被指数（GNDVI）、红边归一化差分指数（NDRE）与比值植被指数（RVI）：
-
-$ "NDVI" = frac("NIR" - R, "NIR" + R + epsilon), quad "GNDVI" = frac("NIR" - G, "NIR" + G + epsilon) $
-
-$ "NDRE" = frac("NIR" - "RE", "NIR" + "RE" + epsilon), quad "RVI" = frac("NIR", R + epsilon) $
-
-其中 $epsilon = 10^(-6)$ 为防止分母为零的极小常数。NDVI 与 GNDVI 描述近红外相对红光、绿光的优势，NDRE 利用红边波段对叶绿素与冠层结构变化更敏感，RVI 以比值形式强调近红外与红光的相对关系@tucker1979ndvi。每个指数同样提取均值、标准差与三个分位数，共 $4 times 5 = 20$ 维。
+在归一化波段上计算四类多光谱指数，计算式见@tab:ms-indices。NDVI 与 GNDVI 描述近红外相对红光、绿光的优势，NDRE 利用红边波段对叶绿素与冠层结构变化更敏感，RVI 以比值形式强调近红外与红光的相对关系@tucker1979ndvi@gitelson1996gndvi@barnes2000ndre@jordan1969rvi。每个指数同样提取均值、标准差与三个分位数，共 $4 times 5 = 20$ 维。
 
 === 可见光颜色与指数特征
 
 可见光特征由 RGB、HSV 颜色统计与可见光植被指数统计组成。RGB 三个通道与 HSV 三个分量分别提取均值与标准差，共 $2 times 3 times 2 = 12$ 维；HSV 的色调与饱和度对棉絮外露引起的颜色变化较为敏感。
 
-此外计算三种可见光植被指数：超绿指数（ExG）、可见光大气阻抗植被指数（VARI）与归一化绿红差（NGRDI）：
+此外计算三种可见光植被指数，计算式见@tab:ms-indices。ExG 强调绿色通道相对红、蓝通道的优势响应，常用于植被提取与背景抑制@woebbecke1995exg；VARI 通过扣除蓝光构造对大气与照度变化更稳定的表征@gitelson2002vari；NGRDI 是归一化差分思想在可见光域的简化实现@hunt2005ngrdi。每个可见光指数提取均值、标准差与第 10、50、90 百分位数，共 $3 times 5 = 15$ 维。可见光特征合计 27 维。
 
-$ "ExG" = 2G - R - B, quad "VARI" = frac(G - R, G + R - B + epsilon), quad "NGRDI" = frac(G - R, G + R + epsilon) $
-
-ExG 强调绿色通道相对红、蓝通道的优势响应，常用于植被提取与背景抑制@woebbecke1995exg；VARI 通过扣除蓝光构造对大气与照度变化更稳定的表征@gitelson2002vari；NGRDI 是归一化差分思想在可见光域的简化实现@tucker1979ndvi@hunt2005ngrdi。每个可见光指数提取均值、标准差与第 10、50、90 百分位数，共 $3 times 5 = 15$ 维。可见光特征合计 27 维。
+#figure(
+  three-line-table(table(
+    columns: (2.7fr, 1.3fr),
+    align: (left, center),
+    table.header([光谱指数], [公式]),
+    table.cell(colspan: 2, align: center)[*从 RGB 影像中计算的指数*],
+    [ExG\ 超绿指数（Excess Green Index）@woebbecke1995exg], [$2G - R - B$],
+    [VARI\ 可见光大气阻抗植被指数（Visible Atmospherically Resistant Index）@gitelson2002vari], [$(G - R) / (G + R - B + epsilon)$],
+    [NGRDI\ 归一化绿红差（Normalized Green-Red Difference Index）@hunt2005ngrdi], [$(G - R) / (G + R + epsilon)$],
+    table.cell(colspan: 2, align: center)[*从多光谱影像中计算的指数*],
+    [NDVI\ 归一化差分植被指数（Normalized Difference Vegetation Index）@tucker1979ndvi], [$("NIR" - R) / ("NIR" + R + epsilon)$],
+    [GNDVI\ 绿通道归一化差分植被指数（Green Normalized Difference Vegetation Index）@gitelson1996gndvi], [$("NIR" - G) / ("NIR" + G + epsilon)$],
+    [NDRE\ 红边归一化差分指数（Normalized Difference Red Edge Index）@barnes2000ndre], [$("NIR" - "RE") / ("NIR" + "RE" + epsilon)$],
+    [RVI\ 比值植被指数（Ratio Vegetation Index）@jordan1969rvi], [$"NIR" / (R + epsilon)$],
+  )),
+  caption: [本研究使用的光谱指数及其计算式。$epsilon = 10^(-6)$ 为防止分母为零的极小常数；多光谱指数在归一化 DN 值上计算，不代表物理反射率指数。],
+) <tab:ms-indices>
 
 === 近红外纹理特征
 
