@@ -295,6 +295,13 @@ $ "MAE" = frac(1, N) sum_(i=1)^N abs(hat(y)_i - y_i) $
 
 === 相关性与错误分析
 
+在考察特征与成熟等级的关系之前，先分析特征之间的相关与冗余。多源结构化特征中，同一变量的不同统计量以及不同特征组之间存在不同程度的线性相关，如@fig:corr-heatmap 所示。
+
+#figure(
+  image("feature_correlation_heatmap.png", width: 88%),
+  caption: [代表性结构化特征间的 Spearman 秩相关矩阵。对角线附近的块状结构反映同一波段或指数不同统计量之间的相关性，跨块区域反映不同特征组之间的关系。],
+) <fig:corr-heatmap>
+
 为解释各特征与成熟等级的关系，对所有样本的 71 维特征分别计算与脱叶率、吐絮率等级的 Spearman 秩相关系数。代表性结果见@tab:cv-correlation。
 
 #figure(
