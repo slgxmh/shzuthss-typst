@@ -14,46 +14,46 @@
   caption: "棉花脱叶率与吐絮率识别任务工作流。依次包括无人机影像采集、专家标注与数据预处理、模型训练与比较、端侧推理测试以及真实大田验证。",
 )<fig:workflow>
 
-== 方法 <pmethod>
+== 方法 <sec:method>
 === 网络结构
 
 #figure(
   image("network.png"),
   caption: "RTCMNet 网络结构总览。（a）特征提取主干由 stem 和 layer_1 至 layer_4 组成；（b）Conv Block 使用二维卷积与批归一化提取特征；（c）多尺度卷积注意力通过不同尺度的卷积分支聚合局部与上下文信息；（d）MSCA Block 结合卷积注意力、Drop Path 和 MLP；最右侧两个结构相同的分类器分别输出脱叶率与吐絮率等级。",
-)<network>
+)<fig:network>
 
 增加模型复杂度可能改善识别，却也会提高训练与部署成本。对于棉田影像，还需在有限计算量下同时描述局部冠层细节和较大范围的上下文。本研究据此设计 RTCMNet，在轻量主干中引入多尺度卷积注意力模块（MSCA Block），并以双分类头联合预测脱叶率与吐絮率。
 RTCMNet 由共享特征提取主干和两个任务分类头组成。卷积层先提取浅层特征，MSCA Block 再整合多尺度信息，两个分类头分别输出双指标等级。MSCA Block 借鉴 SCTNet@xu2024sctnet 的卷积注意力设计，以卷积计算控制语义建模开销。
 
 === 特征提取
 
-RTCMNet 的特征提取模块由 stem 和 layer_1 至 layer_4 五个阶段组成（@network (a)）。layer_1 与 layer_2 采用 Conv Block（@network (b)），layer_3 与 layer_4 引入 MSCA Block；MSCA Block 包含多尺度卷积注意力、Drop Path 和 MLP（@network (d)）。输入图像先经 stem、layer_1 和 layer_2 提取浅层与局部特征，再由后续卷积和 MSCA 模块整合多尺度信息。主干网络的输出供两个分类头分别预测脱叶率和吐絮率等级。
+RTCMNet 的特征提取模块由 stem 和 layer_1 至 layer_4 五个阶段组成（@fig:network (a)）。layer_1 与 layer_2 采用 Conv Block（@fig:network (b)），layer_3 与 layer_4 引入 MSCA Block；MSCA Block 包含多尺度卷积注意力、Drop Path 和 MLP（@fig:network (d)）。输入图像先经 stem、layer_1 和 layer_2 提取浅层与局部特征，再由后续卷积和 MSCA 模块整合多尺度信息。主干网络的输出供两个分类头分别预测脱叶率和吐絮率等级。
 
 === 多尺度卷积注意力
 
 标准自注意力能够建立长程依赖，但其矩阵运算会增加高分辨率特征图上的计算开销。为适应端侧推理需求，本研究采用 MSCA Block，以多尺度卷积近似空间关系建模，在保留局部上下文的同时降低计算复杂度。
-MSCA 模块的运行方式接近经典 Transformer 编码器@vaswani2017attention 的“残差 + 归一化”结构（如图@network (d) 所示），其基本形式可概括为：
+MSCA 模块的运行方式接近经典 Transformer 编码器@vaswani2017attention 的“残差 + 归一化”结构（如@fig:network (d) 所示），其基本形式可概括为：
 $ f = op("BN")(x + op("MSCA")(x)) $ <eq1>
 $ y = op("BN")(f + op("Conv")(f)) $ <eq2>
-其中 $op("BN")(·)$ 表示 Batch Normalization，$x$、$f$、$y$ 分别表示输入、隐藏特征与输出；$op("MSCA")(·)$ 为多尺度卷积注意力子块，$op("Conv")(·)$ 为逐位置前馈子块（图@network (d) 中的 MLP）；两个子块的残差分支均使用 Drop Path 正则化。
+其中 $op("BN")(·)$ 表示 Batch Normalization，$x$、$f$、$y$ 分别表示输入、隐藏特征与输出；$op("MSCA")(·)$ 为多尺度卷积注意力子块，$op("Conv")(·)$ 为逐位置前馈子块（@fig:network (d) 中的 MLP）；两个子块的残差分支均使用 Drop Path 正则化。
 
-MSCA 的结构如@network (c) 所示。标准自注意力将输入显式映射为 Query（Q）、Key（K）和 Value（V），并通过点积计算位置间的相似性。MSCA 使用多尺度可分离卷积构造不同尺度的 Key 分支，在局部邻域内提取不同尺度的响应，再由 GDN 对各分支响应进行归一化。该设计以卷积运算和归一化替代大规模矩阵点积，同时保留多尺度局部上下文。
+MSCA 的结构如@fig:network (c) 所示。标准自注意力将输入显式映射为 Query（Q）、Key（K）和 Value（V），并通过点积计算位置间的相似性。MSCA 使用多尺度可分离卷积构造不同尺度的 Key 分支，在局部邻域内提取不同尺度的响应，再由 GDN 对各分支响应进行归一化。该设计以卷积运算和归一化替代大规模矩阵点积，同时保留多尺度局部上下文。
 与窗口式自注意力（如 Swin Transformer 块@liu2021swin）相比，MSCA 避免了大规模矩阵运算和相对位置编码，适合对实时性和轻量化有较高要求的无人机植物表型任务。
 
 MSCA 基于卷积注意力（CA）@xu2024sctnet 改进。CA 采用 7×1、1×7 等固定方向的可分离卷积描述水平与垂直依赖，适合行列结构较规则的场景。棉花冠层的纹理尺度和局部形态变化较大，单尺度卷积可能难以覆盖这些差异。MSCA 因而引入 3×3、5×5 等多尺度可分离卷积分支，配合可学习输出映射和残差连接，在控制计算量的同时扩大局部结构的描述范围。
 
 从计算形式看，卷积核直接作用于局部像素块，可在估计空间响应的同时保留邻域结构。本研究将多尺度卷积注意力表示为：
-$ A(X) = limits(op("Concat"))_(s=1)^S op("GDN")(op("Attn")_s(op("BN")(X))) $ <sqattn>
-$ Y = W_o A(X) + W_r(X) $ <eqtmsca>
+$ A(X) = limits(op("Concat"))_(s=1)^S op("GDN")(op("Attn")_s(op("BN")(X))) $ <eq:sqattn>
+$ Y = W_o A(X) + W_r(X) $ <eq:tmsca>
 
-其中，$X in RR^(C_"in" times H times W)$ 表示输入特征图；$op("BN")(·)$ 为批归一化；$op("Attn")_s(·)$ 为第 $s$ 个尺度的卷积注意力分支，对应图@network (c) 中由 Query 与 $3 times 3$、$5 times 5$ 两个 Key 分支计算相似性并同 Value 结合的过程，本章取 $S = 2$；$op("GDN")(·)$ 为图@network (c) 中的归一化模块，在通道维度上对各分支响应作归一化；$op("Concat")(·)$ 表示沿通道维拼接；$W_o$ 为输出映射（可实现为 $1 times 1$ 卷积），$W_r(·)$ 为残差分支的通道匹配映射（输入输出通道一致时可为恒等映射）。多个尺度分支的归一化响应沿通道维拼接后由 $W_o$ 融合，从而形成兼顾细节与上下文的注意力增强表示。
+其中，$X in RR^(C_"in" times H times W)$ 表示输入特征图；$op("BN")(·)$ 为批归一化；$op("Attn")_s(·)$ 为第 $s$ 个尺度的卷积注意力分支，对应@fig:network (c) 中由 Query 与 $3 times 3$、$5 times 5$ 两个 Key 分支计算相似性并同 Value 结合的过程，本章取 $S = 2$；$op("GDN")(·)$ 为@fig:network (c) 中的归一化模块，在通道维度上对各分支响应作归一化；$op("Concat")(·)$ 表示沿通道维拼接；$W_o$ 为输出映射（可实现为 $1 times 1$ 卷积），$W_r(·)$ 为残差分支的通道匹配映射（输入输出通道一致时可为恒等映射）。多个尺度分支的归一化响应沿通道维拼接后由 $W_o$ 融合，从而形成兼顾细节与上下文的注意力增强表示。
 该模块以较低计算开销聚合不同感受野的局部响应，适合用于无人机冠层影像的端侧识别。
 
 === 分类器设计
 
 RTCMNet 通过共享骨干和两个任务分类头同时预测脱叶率与吐絮率。主干网络提取的特征经自适应平均池化后，分别输入两个结构相同的分类头。每个分类头由全连接层、ReLU 激活函数和输出层组成，输出相应任务的类别概率。
 
-== 实验与结果 <pexp>
+== 实验与结果 <sec:experiment>
 
 本研究将 RTCMNet 与四类共十一种骨干网络进行比较：经典卷积网络 ResNet-18@he2016resnet、DenseNet-121@huang2017densenet 和 InceptionV3@szegedy2015inceptionv3，视觉 Transformer ViT-S@dosovitskiy2020vit 与 LeViT-128@graham2021levit，轻量级网络 SqueezeNet@iandola2016squeezenet、MobileNetV2@sandler2018mobilenetv2、MobileNetV3-Small@howard2019mobilenetv3、ShuffleNetV2@ma2018shufflenetv2 与 EfficientNet@tan2019efficientnet，以及面向语义分割的轻量结构 SCTNet@xu2024sctnet。评价内容包括识别准确率、模型规模、计算量和端侧推理速度。
 在本次实验中，模型训练在 Windows 平台上完成，PyTorch 版本为 2.5.1，TorchVision 版本为 0.20.1，ONNX 版本为 1.17.0。移动端测试在大疆遥控器上完成，型号为 DJI RC Pro Enterprise，其搭载 Android 10 系统。
@@ -83,17 +83,17 @@ $ cal(L)_"total" = cal(L)_"DE" + cal(L)_"BA". $
 
 脱叶率与吐絮率分别为 8 类和 6 类单标签多分类任务，因此本研究基于混淆矩阵定义评价指标。设任务 $t in {"DE", "BA"}$ 的类别数为 $K_t$，混淆矩阵 $C^t$ 中的元素 $C_(i j)^t$ 表示真实类别为 $i$、预测类别为 $j$ 的样本数，则任务 $t$ 的准确率 $A_t$ 定义为
 
-$ A_t = frac(sum_(k=1)^(K_t) C_(k k)^t, sum_(i=1)^(K_t) sum_(j=1)^(K_t) C_(i j)^t). $ <eq_acc>
+$ A_t = frac(sum_(k=1)^(K_t) C_(k k)^t, sum_(i=1)^(K_t) sum_(j=1)^(K_t) C_(i j)^t). $ <eq:acc>
 
 对第 $k$ 类，其精确率、召回率和 F1 分数分别定义为
 
-$ P_(t,k) = frac(C_(k k)^t, sum_(i=1)^(K_t) C_(i k)^t), quad R_(t,k) = frac(C_(k k)^t, sum_(j=1)^(K_t) C_(k j)^t), $ <eq_prec>
+$ P_(t,k) = frac(C_(k k)^t, sum_(i=1)^(K_t) C_(i k)^t), quad R_(t,k) = frac(C_(k k)^t, sum_(j=1)^(K_t) C_(k j)^t), $ <eq:prec>
 
 $ "F1"_(t,k) = frac(2 P_(t,k) R_(t,k), P_(t,k) + R_(t,k)). $ <eq_f1>
 
 为降低类别不均衡对总体指标的掩盖，本研究在每个任务内部对各类别等权平均，得到宏平均精确率 $P_t$、宏平均召回率 $R_t$ 与 Macro-F1：
 
-$ P_t = frac(1, K_t) sum_(k=1)^(K_t) P_(t,k), quad R_t = frac(1, K_t) sum_(k=1)^(K_t) R_(t,k), $ <eq_recall>
+$ P_t = frac(1, K_t) sum_(k=1)^(K_t) P_(t,k), quad R_t = frac(1, K_t) sum_(k=1)^(K_t) R_(t,k), $ <eq:recall>
 
 $ "F1"_t = frac(1, K_t) sum_(k=1)^(K_t) "F1"_(t,k). $
 
@@ -105,12 +105,12 @@ $ M_("avg") = frac(M_("DE") + M_("BA"), 2). $
 
 为了分析模型在端侧部署中的资源消耗，本研究将参数数量、计算复杂度（以 GMACs 计）以及 PC 端与移动端推理时间一并纳入评估。MACs（multiply–accumulate operations）表示一次前向推理中乘加运算的数量，GMACs 为其十亿量级表示，用于度量模型计算复杂度。在卷积神经网络（CNN）中，标准卷积层的 MACs 可通过以下公式计算：
 
-$ text("MACs") = K times K times C_("in") times H_("out") times W_("out") times C_("out") $ <dq_macs>
+$ text("MACs") = K times K times C_("in") times H_("out") times W_("out") times C_("out") $ <eq:macs>
 
 其中，$K$ 表示卷积核的尺寸，$C_("in")$ 与 $C_("out")$ 分别为输入与输出通道数，$H_("out")$ 与 $W_("out")$ 为输出特征图的高与宽。
 整个模型的乘加运算量由各层 MACs 相加得到：
 
-$ text("MACs")_("total") = sum_(l=1)^L text("MACs")_l $ <sq_macs_all>
+$ text("MACs")_("total") = sum_(l=1)^L text("MACs")_l $ <eq:macs-total>
 
 总 MACs 除以 $10^9$ 后以 GMACs 表示：
 
@@ -130,9 +130,9 @@ $ text("GMACs") = frac(text("MACs")_("total"), 10^9) $
     three-line-table(all_metrics)
   },
   caption: [不同模型在脱叶率与吐絮率双任务上的综合性能。准确率、F1、精确率和召回率为每次划分两项任务对应指标的算术平均，表中报告五次重复随机划分的均值 $plus.minus$ 标准差；参数量、MACs 和推理时间为确定性部署指标。],
-)<allmetric>
+)<tab:allmetric>
 
-在五次重复随机划分中，DenseNet-121 在经典模型组中表现最好（@allmetric）：双任务平均准确率和 Macro-F1 均为 $0.94 plus.minus 0.01$，宏平均精确率为 $0.95 plus.minus 0.01$，宏平均召回率为 $0.94 plus.minus 0.01$。ResNet-18 的准确率为 $0.89 plus.minus 0.04$、宏平均精确率为 $0.91 plus.minus 0.04$；InceptionV3 与 ViT-S 的准确率分别为 $0.79 plus.minus 0.04$ 和 $0.77 plus.minus 0.04$。
+在五次重复随机划分中，DenseNet-121 在经典模型组中表现最好（@tab:allmetric）：双任务平均准确率和 Macro-F1 均为 $0.94 plus.minus 0.01$，宏平均精确率为 $0.95 plus.minus 0.01$，宏平均召回率为 $0.94 plus.minus 0.01$。ResNet-18 的准确率为 $0.89 plus.minus 0.04$、宏平均精确率为 $0.91 plus.minus 0.04$；InceptionV3 与 ViT-S 的准确率分别为 $0.79 plus.minus 0.04$ 和 $0.77 plus.minus 0.04$。
 
 在轻量级模型方面，ShuffleNetV2 的准确率和 Macro-F1 均为 $0.92 plus.minus 0.02$，宏平均精确率为 $0.93 plus.minus 0.02$，表现出较强的识别性能。EfficientNet 的准确率为 $0.88 plus.minus 0.04$，LeViT-128 为 $0.86 plus.minus 0.05$。MobileNetV2 与 MobileNetV3-Small 的准确率分别为 $0.74 plus.minus 0.01$ 和 $0.13 plus.minus 0.00$，表明不同轻量结构在当前任务上的表现差异较大；这些结果仅反映统一实验协议下的经验差异，不将单一模型的低分直接归因于轻量化程度。
 
@@ -141,13 +141,13 @@ RTCMNet 的准确率、Macro-F1、宏平均精确率和宏平均召回率均为 
 #figure(
   block(image("model_params.png")),
   caption: "模型参数量、识别性能与推理时间对比。（a）准确率、参数量与推理时间之间的关系；（b）DJI 遥控器平台上的推理时间。",
-)<model_params>
+)<fig:model_params>
 
-如@model_params 所示，本研究构建的 RTCMNet 在分类性能与运算效率之间实现了较好的平衡。DenseNet-121 的参数量为 6.63 M，移动端推理时间为 1084 ms；最终采用的 RTCMNet 仅需 0.37 M 参数，约为 DenseNet-121 的 5.6%，双任务平均准确率为 $0.93 plus.minus 0.02$，与 DenseNet-121 的 $0.94 plus.minus 0.01$ 接近，且在 DJI 遥控器上的推理时延仅为 32 ms。
+如@fig:model_params 所示，本研究构建的 RTCMNet 在分类性能与运算效率之间实现了较好的平衡。DenseNet-121 的参数量为 6.63 M，移动端推理时间为 1084 ms；最终采用的 RTCMNet 仅需 0.37 M 参数，约为 DenseNet-121 的 5.6%，双任务平均准确率为 $0.93 plus.minus 0.02$，与 DenseNet-121 的 $0.94 plus.minus 0.01$ 接近，且在 DJI 遥控器上的推理时延仅为 32 ms。
 
 与 MobileNetV2 相比，RTCMNet 参数量更小、GMACs 更低，推理时间由 62 ms 降至 32 ms，双任务平均准确率则由 $0.74 plus.minus 0.01$ 提高至 $0.93 plus.minus 0.02$。MobileNetV3-Small 虽具有较低推理时延，但其准确率为 $0.13 plus.minus 0.00$；因此，轻量模型仍需结合识别精度和设备时延共同评价。
 ShuffleNetV2 与 EfficientNet 也表现出较好的准确率和较快的推理速度，但它们的参数量明显高于 RTCMNet：ShuffleNetV2 的参数量为 5.10 M，约为 RTCMNet（0.37 M）的 13.8 倍，EfficientNet 则约为 3.82 M。在计算资源受限的无人机等边缘设备中，更大的模型规模会增加存储与部署成本，不利于灵活集成。
-如@model_params (b) 所示，RTCMNet 在 DJI 遥控器上的推理时延低于 SCTNet 等轻量网络，表明其能够满足当前设备上的低时延推理需求。该结果为脱叶率与吐絮率的现场快速识别提供了设备端依据。
+如@fig:model_params (b) 所示，RTCMNet 在 DJI 遥控器上的推理时延低于 SCTNet 等轻量网络，表明其能够满足当前设备上的低时延推理需求。该结果为脱叶率与吐絮率的现场快速识别提供了设备端依据。
 
 上述比较显示，DenseNet-121 的分类指标最高，但移动端时延较长；RTCMNet 以较小模型规模获得接近的分类结果，适合当前设备的快速双指标识别需求。
 
@@ -156,9 +156,9 @@ ShuffleNetV2 与 EfficientNet 也表现出较好的准确率和较快的推理�
 #figure(
   image("de_res.png"),
   caption: "不同模型的脱叶率等级分类结果。",
-)<defaliation_res>
+)<fig:defoliation_res>
 
-@defaliation_res 给出了不同模型在脱叶率等级分类任务上的准确率、精确率、召回率和 F1；其数据处理和评价协议与吐絮率任务一致。
+@fig:defoliation_res 给出了不同模型在脱叶率等级分类任务上的准确率、精确率、召回率和 F1；其数据处理和评价协议与吐絮率任务一致。
 DenseNet-121 在脱叶率任务上的准确率、精确率、召回率和 F1 均为 0.95。ShuffleNetV2 与 ResNet-18 的结果较为接近，前者略高。
 ShuffleNetV2 在轻量模型中表现较好，以小于部分经典模型的规模获得较高分类指标。
 EfficientNet 和 SqueezeNet 的指标低于 ShuffleNetV2；MobileNetV3-Small 的准确率仅为 0.13。该结果说明这一模型在当前训练协议下未能有效完成分类，其原因还需结合训练过程检查，不能仅由参数量解释。
@@ -173,9 +173,9 @@ RTCMNet 的综合指标优于多数轻量基线，而模型规模显著小于 De
 #figure(
   image("bo_res.png"),
   caption: "不同模型的吐絮率等级分类结果。",
-)<boll_opeening_res>
+)<fig:boll_opening_res>
 
-@boll_opeening_res 给出了不同模型在吐絮率等级分类任务上的准确率、精确率、召回率和 F1。DenseNet-121 的四项指标最高；RTCMNet 的综合表现仅次于 DenseNet-121，并优于大部分轻量模型，其精确率优势较为明显。
+@fig:boll_opening_res 给出了不同模型在吐絮率等级分类任务上的准确率、精确率、召回率和 F1。DenseNet-121 的四项指标最高；RTCMNet 的综合表现仅次于 DenseNet-121，并优于大部分轻量模型，其精确率优势较为明显。
 
 吐絮率等级主要由白絮暴露比例、铃壳开裂状态和冠层遮挡关系等视觉线索共同决定，背景高亮区域和尺度变化可能造成干扰。RTCMNet 的结果与其多尺度特征设计相一致，但各模块的具体贡献仍以消融实验为依据。
 
@@ -186,9 +186,9 @@ RTCMNet 的综合指标优于多数轻量基线，而模型规模显著小于 De
 #figure(
   three-line-table(ablation_study),
   caption: "RTCMNet 消融实验。比较不同层配置、注意力类型和注意力头数下的识别准确率、端侧推理时间与计算量。",
-)<ablation_study>
+)<tab:ablation_study>
 
-为分析注意力类型和网络规模的影响，本研究以 Conv-Former Block@xu2024sctnet 替换 MSCA Block，并调整层数与头数。@ablation_study 比较了各配置的准确率、端侧时延和计算量。
+为分析注意力类型和网络规模的影响，本研究以 Conv-Former Block@xu2024sctnet 替换 MSCA Block，并调整层数与头数。@tab:ablation_study 比较了各配置的准确率、端侧时延和计算量。
 
 采用 CF、层配置为 1,1,1、头数为 8 时，模型准确率为 0.89，端侧时延为 22 ms，计算量为 0.37 GMACs。将 CF 配置扩展至 1,2,2 和 16 头后，准确率仅升至 0.90，时延和计算量则分别增至 205 ms 和 6.75 GMACs。采用 MSCA 后，1,1,1 配置的准确率为 0.91，时延为 29 ms，计算量为 0.16 GMACs；1,2,2 和 8 头配置的准确率进一步达到 0.942，时延为 31 ms，计算量为 0.19 GMACs。继续增加至 16 头后，准确率降至 0.92，而时延和计算量分别增至 113 ms 和 0.68 GMACs。综合上述结果，最终选用 1,2,2 层配置与 8 头的 MSCA 作为 RTCMNet 的配置。
 
@@ -199,9 +199,9 @@ RTCMNet 的综合指标优于多数轻量基线，而模型规模显著小于 De
 #figure(
   image("model_feature.png"),
   caption: "不同骨干网络的输出特征可视化。",
-)<model_feature>
+)<fig:model_feature>
 
-为比较不同骨干网络的特征分布，本研究向已训练模型输入相同样本，提取骨干输出，并使用 t-SNE（t-Distributed Stochastic Neighbor Embedding）将高维特征降至三维进行可视化，结果如@model_feature 所示。
+为比较不同骨干网络的特征分布，本研究向已训练模型输入相同样本，提取骨干输出，并使用 t-SNE（t-Distributed Stochastic Neighbor Embedding）将高维特征降至三维进行可视化，结果如@fig:model_feature 所示。
 
 可视化中，DenseNet-121 的特征分布较紧密、均匀，MobileNetV3-Small 则存在明显聚集；LeViT-128 的分布也较 ViT-S 均匀。这些差异与分类结果可相互参照，但 t-SNE 展示的是降维投影，不能仅凭聚集形态判断高维特征是否可分，也不足以确定性能差异的结构原因。
 
