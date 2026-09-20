@@ -295,7 +295,7 @@ $L^3$-AgriUAVNet 的参数量约为 LLFormer 的 1/42、Retinexformer 的 1/15 �
 === 真实低光图像测试
 
 #figure(
-  image("fig6_real_low_light.png", width: 100%),
+  image("fig6_real_low_light.jpg", width: 100%),
   caption: [
     真实低光玉米苗无人机图像块上的定性比较。依次展示 Raw、RFDN、Retinexformer、LLFormer 和 $L^3$-AgriUAVNet。该数据与用于退化参数标定的 26 张棉花低光图像相互独立，并采用视觉观察与@tab:l3_real_no_ref 的无参考统计进行联合评价。
   ],
@@ -324,7 +324,7 @@ Tenengrad 从 33.16 提高至 102.87，边缘密度和局部对比度也增大�
 === 模型性能验证
 
 #figure(
-  image("fig7_detection_examples.png", width: 100%),
+  image("fig7_detection_examples.jpg", width: 100%),
   caption: [
     YOLOv8n 的应用示例与汇总 mAP。逐图示例展示增强对轻量检测器的不同影响，定量结果由@tab:l3_yolov8n 的聚合指标给出。
   ],
